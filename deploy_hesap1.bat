@@ -8,7 +8,7 @@ REM Proje dizinine git
 cd /d "C:\Users\FOCUSGC\Desktop\AKARE-YAZILIM\HESAP\HESAP-1"
 
 REM (İsteğe bağlı) Fly app adını burada belirt; fly.toml'daki app ismi ile aynı olmalı
-set APP_NAME=akare-hesap
+set APP_NAME=hesap
 
 echo [1/3] GitHub'a push yapiliyor...
 git add .

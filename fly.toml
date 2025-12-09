@@ -1,4 +1,4 @@
-app = "akare-hesap" # Gerekirse Fly.io'daki gerçek app adınla değiştir
+app = "hesap" # Gerekirse Fly.io'daki gerçek app adınla değiştir
 primary_region = "ams" # Uygulamanın çalışacağı bölge (örnek: ams, fra, iad)
 
 [build]
