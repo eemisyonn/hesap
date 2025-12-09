@@ -1,0 +1,77 @@
+[
+  {
+    "firma": "adem",
+    "olcum_kodu": "1",
+    "baca": "proses",
+    "personel": "",
+    "asama": 2,
+    "parametreler": [
+      {
+        "parametre": "Toz_EPA5\n                \n                    \n                    Hız: 12 m/s | Sıcaklık: 125 °C | Basınç: 100.98 kPa | Nem: 2% | Atmosfer: 101.3 kPa | Seri: M5PMA- 1710",
+        "baslangic": "01/12/25 10:00",
+        "ayarlananSure": "1080.0",
+        "traversSayisi": "3",
+        "nozzleCapi": "10",
+        "sure": "360",
+        "sayacHacmi": "1017.9",
+        "ortVakumDebi": "56.5"
+      }
+    ],
+    "kayit_tarihi": "2025-12-07 23:48:40"
+  },
+  {
+    "firma": "kaan",
+    "olcum_kodu": "2",
+    "baca": "1 no baca",
+    "personel": "",
+    "asama": 2,
+    "parametreler": [
+      {
+        "parametre": "AĞIR MET_EPA 29\n                \n                    \n                    Hız: 10 m/s | Sıcaklık: 55 °C | Basınç: 101 kPa | Nem: 3% | Atmosfer: 101.3 kPa | Seri: M5PMA- 1710",
+        "baslangic": "03/12/25 00:54",
+        "ayarlananSure": "1080.0",
+        "traversSayisi": "3",
+        "nozzleCapi": "6",
+        "sure": "360",
+        "sayacHacmi": "305.4",
+        "ortVakumDebi": "17",
+        "olcum1Bitis": "03/12/25 01:12",
+        "olcum2Baslangic": "03/12/25 01:23",
+        "olcum2Bitis": "03/12/25 01:41",
+        "olcum3Baslangic": "03/12/25 01:52",
+        "olcum3Bitis": "03/12/25 02:10"
+      },
+      {
+        "parametre": "Toz_EPA5\n                \n                    \n                    Hız: 10 m/s | Sıcaklık: 55 °C | Basınç: 101 kPa | Nem: 3% | Atmosfer: 101.3 kPa | Seri: M5PMA- 1710",
+        "baslangic": "11/12/25 04:59",
+        "ayarlananSure": "360.0",
+        "traversSayisi": "2",
+        "nozzleCapi": "6",
+        "sure": "180",
+        "sayacHacmi": "101.8",
+        "ortVakumDebi": "17",
+        "olcum1Bitis": "11/12/25 05:05",
+        "olcum2Baslangic": "11/12/25 05:13",
+        "olcum2Bitis": "11/12/25 05:19",
+        "olcum3Baslangic": "11/12/25 05:26",
+        "olcum3Bitis": "11/12/25 05:32"
+      },
+      {
+        "parametre": "SÜLFÜRİK ASİT\n                \n                    \n                    Hız: 10 m/s | Sıcaklık: 55 °C | Basınç: 101 kPa | Nem: 3% | Atmosfer: 101.3 kPa | Seri: M5PMA- 1710",
+        "baslangic": "12/12/25 00:55",
+        "ayarlananSure": "480.0",
+        "traversSayisi": "2",
+        "nozzleCapi": "8",
+        "sure": "240",
+        "sayacHacmi": "241.3",
+        "ortVakumDebi": "30.2",
+        "olcum1Bitis": "12/12/25 01:03",
+        "olcum2Baslangic": "12/12/25 01:12",
+        "olcum2Bitis": "12/12/25 01:20",
+        "olcum3Baslangic": "12/12/25 01:31",
+        "olcum3Bitis": "12/12/25 01:39"
+      }
+    ],
+    "kayit_tarihi": "2025-12-08 00:55:30"
+  }
+]

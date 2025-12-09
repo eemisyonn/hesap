@@ -1,0 +1,55 @@
+ AKARE_CEVRE_LABORATUVARI
+ DAN_HIZ_TIC_LTD_STI.
+
+  iZOKiNETiK ÖRNEKLEME RAPORU
+  --------------------------- 
+Cihaz Seri    : {cihaz_seri|12}
+Baslangic     : {baslangic|16}
+Ayarlanan Sure: {ayarlanan_sure_dk|3} dk.
+Baca No       : {baca_no|3}
+Travers sayisi: {travers_sayisi|3}
+Nozzle capi   :  {nozzle_capi_mm|3,1} mm
+Atmosfer basnc: {atmosfer_kpa|6,2} kPa
+Atmosfer basnc: {atmosfer_mmhg|6,2} mmHg
+Pitot katsayi :{pitot_k|5,2}
+Nem           :  {nem|5,2}
+ --------------------------- 
+[[TRAVERS_START]]
+BACA NO       :  {baca_no|3}
+TRAVERS NO    : {t_no|3}
+Sure          : {t_sure_mmss|5}
+Ort.baca hizi : {t_ort_baca_hizi_ms|6,1} m/s
+Sayac hacmi   : {t_sayac_hacmi_l|7,1} l
+Baca sicakligi: {t_baca_sicak_c|6,1}  C
+Sayac gaz sic.: {t_sayac_gaz_c|6,1}  C
+Baca mutlk bas: {t_baca_mutlak_kpa|7,2} kPa
+Baca mutlk bas: {t_baca_mutlak_mmhg|7,2} mmHg
+Pitot dP      : {t_pitot_dp_pa|7,2} Pa
+Pitot dP      : {t_pitot_dp_mmhg|7,4} mmHg
+izokin.verimi : {t_izok_verim|5,2}
+[[TRAVERS_END]]
+
+  iZOKiNETiK ORNEKLEME RAPORU   
+  ---------------------------  
+Cihaz Seri    : {cihaz_seri|12}
+Baslangic     : {o_baslangic|16}
+Bitis         : {o_bitis|16}
+Ornekleme Sure:  {o_ornekleme_sure_hhmm|6}
+Baca No       : {baca_no|3}
+Ort.baca hizi :{o_ort_baca_hizi_ms|6,1} m/s
+Ort.vakum debi:{o_ort_vakum_debi_nl_d|5,1} Nl/d
+Ort.vakum debi:{o_ort_vakum_debi_l_d|5,1} l/d
+Kurugaz hacmi :{o_kurugaz_nl|7,1} Nl
+Sayac hacmi   :{o_sayac_hacmi_l|7,1} l
+Baca sicakligi: {o_baca_sicak_c|6,1} C
+Sayac gaz sic.: {o_sayac_gaz_c|6,1} C
+Referans scklk:    0.0 C
+Baca mutlk bas:{o_baca_mutlak_kpa|7,2} kPa
+Baca mutlk bas:{o_baca_mutlak_mmhg|7,2} mmHg
+Sayac basinci :{o_sayac_basinci_kpa|7,2} kPa
+Sayac basinci :{o_sayac_basinci_mmhg|7,2} mmHg
+Referans basnc: 101.30 kPa
+Referans basnc: 760.05 mmHg
+Pitot dP      :{o_pitot_dp_pa|7,2} Pa
+Pitot dP      :{o_pitot_dp_mmhg|7,4} mmHg
+izokin.verimi : {o_izok_verim|5,2}

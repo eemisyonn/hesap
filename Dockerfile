@@ -1,45 +1,32 @@
-# Use official Python 3.12 slim image
-FROM python:3.12-slim
+FROM python:3.11-slim
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PORT=8080 \
-    FLASK_ENV=production
-
-# Set work directory
-WORKDIR /app
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
+# Sistem güncelleme ve temel bağımlılıklar (WeasyPrint ve docx2pdf için gerekenler basit tutuldu)
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+       libffi-dev \
+       libcairo2 \
+       libpango-1.0-0 \
+       libgdk-pixbuf2.0-0 \
+       libssl-dev \
+       libxml2 \
+       libxslt1.1 \
+       fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy and install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+WORKDIR /app
 
-# Copy application code
+# Python bağımlılıkları
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Uygulama dosyaları
 COPY . .
 
-# Create data directory for persistent storage
+# Veri klasörü (Fly volume buraya mount edilecek)
 RUN mkdir -p /data
+ENV DATA_DIR=/data
 
-# Initialize data files
-RUN python init_data.py
-
-# Create non-root user for security
-RUN useradd --create-home --shell /bin/bash app && \
-    chown -R app:app /app /data
-USER app
-
-# Expose port
+# Gunicorn üzerinden Flask uygulamasını ayağa kaldır
 EXPOSE 8080
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/ || exit 1
-
-# Run application
-CMD ["python", "app.py"]
+CMD ["gunicorn", "-b", "0.0.0.0:8080", "app:app"]

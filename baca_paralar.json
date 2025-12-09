@@ -1,104 +1,125 @@
 [
     {
         "id": "597fad80-d28f-40ea-bd28-a76c61c5203d",
-        "baca_par_adi": "BACA NO",
+        "baca_par_adi": "Baca No",
         "liste_icerigi": "",
-        "created_at": "2025-07-30T02:57:50.462407"
+        "created_at": "2025-07-30T02:57:50.462407",
+        "updated_at": "2025-10-10T00:44:28.562471"
     },
     {
         "id": "ddca398d-0e55-4662-b661-3731e0975bd2",
-        "baca_par_adi": "YAKIT TÜRÜ",
-        "liste_icerigi": "BİOKÜTLE, DOĞAL GAZ, KÖMÜR, SIVI YAKIT",
-        "created_at": "2025-07-30T02:57:50.462460"
+        "baca_par_adi": "Cihaz Seri",
+        "liste_icerigi": "M5PMA- 1710,M5PMA- 1731,M5PMA- 2324",
+        "created_at": "2025-07-30T02:57:50.462460",
+        "updated_at": "2025-10-10T00:44:33.707952"
     },
     {
         "id": "22867c9a-ca3c-4d80-b017-b73dafdd7fef",
-        "baca_par_adi": "ISIL GÜÇ (MW)",
+        "baca_par_adi": "Ayarlanan Sure",
         "liste_icerigi": "",
-        "created_at": "2025-07-30T02:57:50.462482"
+        "created_at": "2025-07-30T02:57:50.462482",
+        "updated_at": "2025-10-10T00:44:39.718299"
     },
     {
         "id": "6b3546e0-184c-49de-82e4-e2835e81923b",
-        "baca_par_adi": "ÇATI ŞEKLİ",
-        "liste_icerigi": "BAĞIMSIZ, DÜZ, EĞİK",
-        "created_at": "2025-07-30T02:57:50.462504"
+        "baca_par_adi": "Travers sayisi:",
+        "liste_icerigi": "",
+        "created_at": "2025-07-30T02:57:50.462504",
+        "updated_at": "2025-10-14T11:24:24.215822"
     },
     {
         "id": "98399625-5bbc-465e-8e09-de454f231ae4",
-        "baca_par_adi": "KAYNAK TÜRÜ",
-        "liste_icerigi": "YAKMA, PROSES",
-        "created_at": "2025-07-30T02:57:50.462523"
+        "baca_par_adi": "Nozzle capi   :",
+        "liste_icerigi": "",
+        "created_at": "2025-07-30T02:57:50.462523",
+        "updated_at": "2025-10-14T11:24:44.764667"
     },
     {
         "id": "d9958774-43f7-4bc3-8e12-436614a6193a",
-        "baca_par_adi": "BACA ŞEKLİ",
-        "liste_icerigi": "DÖRTGEN, DAİRESEL",
-        "created_at": "2025-07-30T02:57:50.462535"
+        "baca_par_adi": "Atmosfer basnc:",
+        "liste_icerigi": "",
+        "created_at": "2025-07-30T02:57:50.462535",
+        "updated_at": "2025-10-14T11:25:08.858587"
     },
     {
         "id": "b1b6fc38-98c0-4048-8b8e-795cf7d44c48",
-        "baca_par_adi": "BACA ÖLÇÜSÜ",
-        "liste_icerigi": "",
-        "created_at": "2025-07-30T02:57:50.462546"
+        "baca_par_adi": "Pitot katsayi :",
+        "liste_icerigi": "0.84",
+        "created_at": "2025-07-30T02:57:50.462546",
+        "updated_at": "2025-10-17T19:32:17.347801"
     },
     {
         "id": "6a301d72-f21b-485b-b8fb-116ad5cb223f",
-        "baca_par_adi": "YERDEN YÜK.",
+        "baca_par_adi": "Nem           :",
         "liste_icerigi": "",
-        "created_at": "2025-07-30T02:57:50.462556"
+        "created_at": "2025-07-30T02:57:50.462556",
+        "updated_at": "2025-10-14T11:26:20.208000"
     },
     {
         "id": "8ec9ecc9-ecda-4bf2-9802-02fa2e3fda4c",
-        "baca_par_adi": "ÇATI YÜK",
+        "baca_par_adi": "BACA NO       :",
         "liste_icerigi": "",
-        "created_at": "2025-07-30T02:57:50.462567"
+        "created_at": "2025-07-30T02:57:50.462567",
+        "updated_at": "2025-10-14T11:26:58.420820"
     },
     {
         "id": "ab2b67dd-16a5-4bee-9b6e-b60b8cfc2d0c",
-        "baca_par_adi": "RÜZGAR HIZ (M/S)",
+        "baca_par_adi": "Sure          :",
         "liste_icerigi": "",
-        "created_at": "2025-07-30T02:57:50.462578"
+        "created_at": "2025-07-30T02:57:50.462578",
+        "updated_at": "2025-10-14T11:27:07.580509"
     },
     {
         "id": "eca60e54-ec39-4412-8884-caa17faed0be",
-        "baca_par_adi": "ORT SIC",
+        "baca_par_adi": "Ort.baca hizi :",
         "liste_icerigi": "",
-        "created_at": "2025-07-30T02:57:50.462589"
+        "created_at": "2025-07-30T02:57:50.462589",
+        "updated_at": "2025-10-14T11:27:24.930287"
     },
     {
         "id": "64238e0a-6387-4c31-9bf4-d7f800ef17e1",
-        "baca_par_adi": "ORT NEM",
+        "baca_par_adi": "Baca sicakligi:",
         "liste_icerigi": "",
-        "created_at": "2025-07-30T02:57:50.462599"
+        "created_at": "2025-07-30T02:57:50.462599",
+        "updated_at": "2025-10-14T11:27:42.802256"
     },
     {
         "id": "b09ad69a-e4d4-4219-b055-2cf923ffd499",
-        "baca_par_adi": "ORT BAS.",
+        "baca_par_adi": "Baca mutlk bas:",
         "liste_icerigi": "",
-        "created_at": "2025-07-30T02:57:50.462609"
+        "created_at": "2025-07-30T02:57:50.462609",
+        "updated_at": "2025-10-14T11:28:05.472248"
     },
     {
         "id": "9c8c8bcf-c98e-4109-8b10-63b08b26460e",
-        "baca_par_adi": "A-BACA",
+        "baca_par_adi": "Sayac gaz sic.",
         "liste_icerigi": "",
-        "created_at": "2025-07-30T02:57:50.462619"
+        "created_at": "2025-07-30T02:57:50.462619",
+        "updated_at": "2025-10-10T00:47:37.715770"
     },
     {
         "id": "af55c55f-f83b-4b90-a655-ee76bf6bb2ac",
-        "baca_par_adi": "B-BACA",
+        "baca_par_adi": "Sayac gaz Basınc",
         "liste_icerigi": "",
-        "created_at": "2025-07-30T02:57:50.462629"
+        "created_at": "2025-07-30T02:57:50.462629",
+        "updated_at": "2025-10-10T00:48:53.619375"
     },
     {
-        "id": "20881447-f7c8-4a6b-8583-76c7246082ef",
-        "baca_par_adi": "C-DELİK",
+        "id": "090d37f5-7189-40bc-8718-faa447ef26c7",
+        "baca_par_adi": "Sayac hacmi   :",
         "liste_icerigi": "",
-        "created_at": "2025-07-30T02:57:50.462640"
+        "created_at": "2025-10-14T11:10:58.330383"
     },
     {
-        "id": "a2c28cce-86ed-41ff-97aa-d23fec4e01ca",
-        "baca_par_adi": "FOTO",
+        "id": "1124c5c2-4475-4247-b6a3-febf11fdbef0",
+        "baca_par_adi": "Ort.vakum debi:",
         "liste_icerigi": "",
-        "created_at": "2025-07-30T02:57:50.462650"
+        "created_at": "2025-10-14T11:14:12.501926"
+    },
+    {
+        "id": "938a793b-8269-493b-af7c-3a4c747ed135",
+        "baca_par_adi": "Ort.vakum debi: NL/D",
+        "liste_icerigi": "",
+        "created_at": "2025-10-14T11:14:40.130438"
     }
 ]

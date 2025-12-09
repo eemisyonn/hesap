@@ -26,41 +26,43 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // İl-İlçe bağlantısı
+    // İl-İlçe bağlantısı (sadece il/ilce alanları varsa)
     const ilSelect = document.getElementById('il');
     const ilceSelect = document.getElementById('ilce');
     
-    // Mevcut ilçeyi yükle
-    if (ilSelect.value) {
-        loadIlceler(ilSelect.value, window.currentIlce || '');
-    }
-    
-    ilSelect.addEventListener('change', function() {
-        const selectedIl = this.value;
-        ilceSelect.innerHTML = '<option value="">İlçe Seçiniz</option>';
-        
-        if (selectedIl) {
-            loadIlceler(selectedIl);
+    if (ilSelect && ilceSelect) {
+        // Mevcut ilçeyi yükle
+        if (ilSelect.value) {
+            loadIlceler(ilSelect.value, window.currentIlce || '');
         }
-    });
-    
-    function loadIlceler(ilAdi, seciliIlce = '') {
-        fetch(`/api/ilceler/${encodeURIComponent(ilAdi)}`)
-            .then(response => response.json())
-            .then(ilceler => {
-                ilceler.forEach(ilce => {
-                    const option = document.createElement('option');
-                    option.value = ilce;
-                    option.textContent = ilce;
-                    if (ilce === seciliIlce) {
-                        option.selected = true;
-                    }
-                    ilceSelect.appendChild(option);
+        
+        ilSelect.addEventListener('change', function() {
+            const selectedIl = this.value;
+            ilceSelect.innerHTML = '<option value="">İlçe Seçiniz</option>';
+            
+            if (selectedIl) {
+                loadIlceler(selectedIl);
+            }
+        });
+        
+        function loadIlceler(ilAdi, seciliIlce = '') {
+            fetch(`/api/ilceler/${encodeURIComponent(ilAdi)}`)
+                .then(response => response.json())
+                .then(ilceler => {
+                    ilceler.forEach(ilce => {
+                        const option = document.createElement('option');
+                        option.value = ilce;
+                        option.textContent = ilce;
+                        if (ilce === seciliIlce) {
+                            option.selected = true;
+                        }
+                        ilceSelect.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('İlçe verileri yüklenemedi:', error);
                 });
-            })
-            .catch(error => {
-                console.error('İlçe verileri yüklenemedi:', error);
-            });
+        }
     }
     
     // Baca sayısı ve tablo işlemleri

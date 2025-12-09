@@ -159,16 +159,6 @@
                 </div>
             </div>
         </div>
-        <div class="d-flex align-items-center">
-            <span class="small text-muted me-1">Seçilenler:</span>
-            <span id="firmaSelectedCount" class="badge bg-secondary me-2">0</span>
-            <button type="button" class="btn btn-sm btn-outline-danger me-1" id="firmaBulkDeleteBtn" onclick="deleteSelectedFirmaOlcum()" disabled>
-                <i class="fas fa-trash me-1"></i>Sil
-            </button>
-            <button type="button" class="btn btn-sm btn-outline-success" id="firmaBulkExcelBtn" onclick="bulkExportExcelFirmaOlcum()" disabled>
-                <i class="fas fa-file-excel me-1"></i>Excel
-            </button>
-        </div>
     </div>
 
     <div class="card border-0 shadow-sm">
@@ -367,30 +357,17 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateButtonStates() {
         const checkedBoxes = document.querySelectorAll('.firma-olcum-checkbox:checked');
         const secilenleriSil = document.getElementById('secilenleriSil');
-        const selectedCountSpan = document.getElementById('firmaSelectedCount');
-        const bulkDeleteBtn = document.getElementById('firmaBulkDeleteBtn');
-        const bulkExcelBtn = document.getElementById('firmaBulkExcelBtn');
-
-        const count = checkedBoxes.length;
-
-        if (selectedCountSpan) {
-            selectedCountSpan.textContent = count.toString();
-        }
         
-        if (count > 0) {
+        if (checkedBoxes.length > 0) {
             if (secilenleriSil) {
                 secilenleriSil.disabled = false;
-                secilenleriSil.innerHTML = `<i class="fas fa-trash me-2"></i>Sil (${count})`;
+                secilenleriSil.innerHTML = `<i class="fas fa-trash me-2"></i>Sil (${checkedBoxes.length})`;
             }
-            if (bulkDeleteBtn) bulkDeleteBtn.disabled = false;
-            if (bulkExcelBtn) bulkExcelBtn.disabled = false;
         } else {
             if (secilenleriSil) {
                 secilenleriSil.disabled = true;
                 secilenleriSil.innerHTML = '<i class="fas fa-trash me-2"></i>Sil';
             }
-            if (bulkDeleteBtn) bulkDeleteBtn.disabled = true;
-            if (bulkExcelBtn) bulkExcelBtn.disabled = true;
         }
     }
     
@@ -654,18 +631,6 @@ function exportFirmaOlcum(olcumIds, format = 'excel') {
             loadingDiv.parentNode.removeChild(loadingDiv);
         }
     });
-}
-
-// Seçilen firma ölçümlerini Excel'e aktar
-function bulkExportExcelFirmaOlcum() {
-    const checkedBoxes = document.querySelectorAll('.firma-olcum-checkbox:checked');
-    if (checkedBoxes.length === 0) {
-        alert('Lütfen Excel\'e aktarılacak ölçümleri seçin!');
-        return;
-    }
-
-    const selectedIds = Array.from(checkedBoxes).map(checkbox => checkbox.value);
-    exportFirmaOlcum(selectedIds, 'excel');
 }
 
 // Tablo filtreleme fonksiyonu

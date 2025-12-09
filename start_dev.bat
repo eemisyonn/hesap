@@ -22,14 +22,14 @@ if %errorlevel% neq 0 (
 )
 
 REM Environment variables ayarla
-set PORT=5001
+set PORT=7000
 set FLASK_ENV=development
 set FLASK_DEBUG=1
 set FLASK_APP=app.py
 
 echo.
 echo === UYGULAMA BAŞLATILIYOR ===
-echo URL: http://localhost:5001
+echo URL: http://localhost:7000
 echo Debug Mode: AÇIK
 echo Auto-Reload: AÇIK
 echo Durdurmak için Ctrl+C tuşlayın

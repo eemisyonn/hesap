@@ -1,6 +1,9 @@
 import os
 import json
 import gc
+import shutil
+import re
+import secrets
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_file, make_response
 from werkzeug.utils import secure_filename
 import requests
@@ -9,6 +12,7 @@ from uuid import uuid4
 import tempfile
 from datetime import datetime
 from io import BytesIO
+from password_generator import PasswordGenerator
 
 # Lazy loading - sadece gerektiğinde yükle
 pandas_loaded = False
@@ -66,6 +70,16 @@ app.config['TEMPLATES_AUTO_RELOAD'] = True if is_dev else False
 app.config['DEBUG'] = True if is_dev else (os.environ.get('FLASK_DEBUG', 'false').lower() == 'true')
 app.jinja_env.auto_reload = True if is_dev else False
 
+# HESAP Projesi Route'ları
+# @app.route('/olcum') - Gereksiz sayfa silindi
+# @app.route('/ayarlar') - Gereksiz sayfa silindi
+# @app.route('/birimler') - Gereksiz sayfa silindi
+# @app.route('/formuller') - Gereksiz sayfa silindi
+# @app.route('/hesaplama_tablosu') - Gereksiz sayfa silindi
+
+# @app.route('/olc_istenilen') - Gereksiz sayfa silindi
+# def olc_istenilen(): - Gereksiz sayfa silindi
+
 def allowed_file(filename, allowed_extensions):
     """Dosya uzantısının izin verilen uzantılar arasında olup olmadığını kontrol eder."""
     return '.' in filename and \
@@ -82,16 +96,15 @@ def data_path(filename: str) -> str:
     return os.path.join(DATA_DIR, filename) if DATA_DIR else filename
 
 USERS_FILE = data_path('users.json')
-EMISSIONS_FILE = data_path('emissions.json')
+# EMISSIONS_FILE = data_path('emissions.json') - Emission sistemi silindi
 PARAMETERS_FILE = data_path('parameters.json')
-MEASUREMENTS_FILE = data_path('measurements.json')
+# MEASUREMENTS_FILE = data_path('measurements.json') - Ölçüm oluşturma sistemi silindi
 FIRMA_OLCUM_FILE = data_path('firma_olcum.json')
 FIRMA_KAYIT_FILE = data_path('firma_kayit.json')
 SAHA_OLC_FILE = data_path('saha_olc.json')
 BACA_BILGILERI_FILE = data_path('baca_bilgileri.json')
 PARAMETRE_OLCUM_FILE = data_path('parametre_olcum.json')
-TEKLIF_FILE = data_path('teklif.json')
-USED_TEKLIF_NUMBERS_FILE = data_path('used_teklif_numbers.json')
+# TEKLIF_FILE ve USED_TEKLIF_NUMBERS_FILE silindi
 BACA_PARALAR_FILE = data_path('baca_paralar.json')
 PARAMETRE_SAHABIL_FILE = data_path('parametre_sahabil.json')
 PARAMETRE_FIELDS_FILE = data_path('parametre_fields.json')
@@ -99,6 +112,8 @@ ASGARI_FIYATLAR_FILE = data_path('asgari_fiyatlar.json')
 PAR_SAHA_HEADERS_FILE = data_path('par_saha_header_groups.json')
 FORMS_FILE = data_path('forms.json')
 IL_ILCE_FILE = data_path('il-ilce.json')
+RAPOR2_FILE = data_path('rapor2_sablonu.json')
+ACCESS_CODE_FILE = data_path('access_code.json')
 
 def ensure_data_files():
     # İlk çalıştırmada mevcut repo kökünden DATA_DIR'e veri kopyala
@@ -108,9 +123,9 @@ def ensure_data_files():
         # İç içe import ile global import tekrarlarını önle
         import shutil
         base_files = [
-            'users.json', 'emissions.json', 'parameters.json', 'measurements.json',
+            'users.json', 'parameters.json',
             'firma_olcum.json', 'firma_kayit.json', 'saha_olc.json', 'baca_bilgileri.json',
-            'parametre_olcum.json', 'teklif.json', 'used_teklif_numbers.json',
+            'parametre_olcum.json', # 'teklif.json', 'used_teklif_numbers.json' silindi
             'parametre_sahabil.json', 'forms.json', 'parametre_fields.json', 'baca_paralar.json',
             'par_saha_header_groups.json'
         ]
@@ -130,6 +145,32 @@ def ensure_data_files():
 # Başlangıçta tek seferlik kontrol
 ensure_data_files()
 
+# RAPOR2 not defteri için yardımcı fonksiyonlar
+RAPOR2_FILE = data_path('rapor2.json')
+
+def load_rapor2_content():
+    if not os.path.exists(RAPOR2_FILE):
+        return ''
+    try:
+        with open(RAPOR2_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            if isinstance(data, dict):
+                return data.get('content', '')
+            if isinstance(data, str):
+                return data
+    except Exception as exc:
+        print(f"rapor2.json okunamadı: {exc}")
+    return ''
+
+def save_rapor2_content(content):
+    try:
+        with open(RAPOR2_FILE, 'w', encoding='utf-8') as f:
+            json.dump({'content': content}, f, ensure_ascii=False, indent=2)
+        return True
+    except Exception as exc:
+        print(f"rapor2.json kaydedilemedi: {exc}")
+        return False
+
 def load_users():
     """Kullanıcıları JSON dosyasından yükler."""
     if not os.path.exists(USERS_FILE):
@@ -145,43 +186,83 @@ def save_users(users_data):
     with open(USERS_FILE, 'w', encoding='utf-8') as f:
         json.dump(users_data, f, indent=4, ensure_ascii=False)
 
-def load_emissions():
-    """Emisyon verilerini JSON dosyasından yükler."""
-    if not os.path.exists(EMISSIONS_FILE):
-        return []
-    with open(EMISSIONS_FILE, 'r', encoding='utf-8') as f:
-        return json.load(f)
 
-def save_emissions(emissions_data):
-    """Emisyon verilerini JSON dosyasına kaydeder."""
-    with open(EMISSIONS_FILE, 'w', encoding='utf-8') as f:
-        json.dump(emissions_data, f, indent=4, ensure_ascii=False)
+def load_access_code():
+    """Aktif giriş şifresini JSON dosyasından yükler."""
+    if not os.path.exists(ACCESS_CODE_FILE):
+        return None
+    try:
+        with open(ACCESS_CODE_FILE, 'r', encoding='utf-8') as f:
+            content = f.read().strip()
+            if not content:
+                return None
+            return json.loads(content)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+
+
+def save_access_code(code_data: dict) -> None:
+    """Aktif giriş şifresini JSON dosyasına kaydeder."""
+    with open(ACCESS_CODE_FILE, 'w', encoding='utf-8') as f:
+        json.dump(code_data, f, indent=2, ensure_ascii=False)
+
+# def load_emissions(): - Emission sistemi silindi
+# def save_emissions(emissions_data): - Emission sistemi silindi
 
 
 
 def load_parameters():
-    """Parametreleri JSON dosyasından yükler."""
-    if not os.path.exists(PARAMETERS_FILE):
+    """Parametreleri excel_data.json dosyasından yükler."""
+    excel_data_file = data_path('excel_data.json')
+    if not os.path.exists(excel_data_file):
         return []
-    with open(PARAMETERS_FILE, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    
+    try:
+        with open(excel_data_file, 'r', encoding='utf-8') as f:
+            excel_data = json.load(f)
+        
+        # Excel verisini parametre formatına dönüştür
+        parameters = []
+        if excel_data and len(excel_data) > 1:  # İlk satır başlık
+            for i, row in enumerate(excel_data[1:], 1):  # İlk satırı atla
+                if len(row) >= 2 and row[1]:  # A sütunu (index 1) boş değilse
+                    param_name = row[1]  # B sütunu (index 1) - Parametre Adı
+                    method = row[2] if len(row) > 2 else ""  # C sütunu - Metot
+                    
+                    # Excel verisinden parametre objesi oluştur
+                    param_obj = {
+                        "Parametre Adı": param_name,
+                        "Metot": method,
+                        "İzo Oran": row[3] if len(row) > 3 else "",
+                        "Nozzle": row[4] if len(row) > 4 else "",
+                        "1. İmp": row[5] if len(row) > 5 else "",
+                        "2. İmp": row[6] if len(row) > 6 else "",
+                        "3. İmp": row[7] if len(row) > 7 else "",
+                        "4. İmp": row[8] if len(row) > 8 else "",
+                        "L/DAK": row[9] if len(row) > 9 else "",
+                        "T.HAC": row[10] if len(row) > 10 else "",
+                        "LOQ": row[11] if len(row) > 11 else "",
+                        "id": f"excel_{i}_{hash(param_name) % 10000}",
+                        "KK": "",
+                        "-3S": "",
+                        "-2S": "",
+                        "+2S": "",
+                        "+3S": ""
+                    }
+                    parameters.append(param_obj)
+        
+        return parameters
+    except Exception as e:
+        print(f"Excel verisi yüklenirken hata: {e}")
+        return []
 
 def save_parameters(parameters_data):
     """Parametreleri JSON dosyasına kaydeder."""
     with open(PARAMETERS_FILE, 'w', encoding='utf-8') as f:
         json.dump(parameters_data, f, indent=4, ensure_ascii=False)
 
-def load_measurements():
-    """Ölçüm verilerini JSON dosyasından yükler."""
-    if not os.path.exists(MEASUREMENTS_FILE):
-        return []
-    with open(MEASUREMENTS_FILE, 'r', encoding='utf-8') as f:
-        return json.load(f)
-
-def save_measurements(measurements_data):
-    """Ölçüm verilerini JSON dosyasına kaydeder."""
-    with open(MEASUREMENTS_FILE, 'w', encoding='utf-8') as f:
-        json.dump(measurements_data, f, indent=4, ensure_ascii=False)
+# def load_measurements(): - Ölçüm oluşturma sistemi silindi
+# def save_measurements(measurements_data): - Ölçüm oluşturma sistemi silindi
 
 def load_firma_olcum():
     """Firma ölçüm verilerini JSON dosyasından yükler."""
@@ -273,6 +354,21 @@ def load_baca_bilgileri():
             data = json.load(f)
             if not isinstance(data, list):
                 return []
+
+            # Eski kayıtlarda id yoksa otomatik üret ve dosyaya geri yaz
+            changed = False
+            for rec in data:
+                if not rec.get('id'):
+                    rec['id'] = str(uuid4())
+                    changed = True
+
+            if changed:
+                try:
+                    with open(BACA_BILGILERI_FILE, 'w', encoding='utf-8') as wf:
+                        json.dump(data, wf, indent=4, ensure_ascii=False)
+                except Exception as e:
+                    print(f"Baca bilgileri ID güncellemesi kaydedilemedi: {e}")
+
             return data
     except Exception as e:
         print(f"Baca bilgileri yüklenirken hata: {e}")
@@ -290,6 +386,132 @@ def save_baca_bilgileri(baca_bilgileri_data):
     except Exception as e:
         print(f"Baca bilgileri kaydedilirken hata: {e}")
         return False
+
+
+def get_saha_olcum_summary():
+    """Kayıtlı saha ölçümleri tablosu için gruplanmış özet liste döner.
+
+    Öncelik sırası:
+    - Eğer baca_bilgileri.json içinde saha kayıtları varsa, bunlar kullanılır.
+    - Eğer baca_bilgileri.json boşsa, firma_olcum.json içindeki ölçüm
+      tanımlarından özet kayıtlar üretilir (her firma/ölçüm/baca için).
+    """
+    # 1) Önce gerçek saha kayıtlarını (baca_bilgileri.json) dene
+    raw_records = load_baca_bilgileri()
+    groups = {}
+    if raw_records:
+        for rec in raw_records:
+            firma = (rec.get('firma_adi') or rec.get('firma') or '').strip()
+            olcum_kodu = str(rec.get('olcum_kodu') or '').strip()
+            baca_val = (rec.get('baca_adi') or rec.get('baca_no') or '').strip()
+            full_tarih = (rec.get('kayit_tarihi') or
+                          rec.get('created_at') or
+                          rec.get('updated_at') or '')
+
+            # Aynı saniye içindeki ölçümleri tek grup saymak için
+            tarih_key = full_tarih[:19] if full_tarih else ''
+
+            key = (firma, olcum_kodu, baca_val, tarih_key)
+
+            if key not in groups:
+                groups[key] = {
+                    'id': None,          # İlk kaydın ID'si (görsel amaçlı)
+                    'ids': [],           # Bu kombinasyona ait tüm ID'ler
+                    'firma_adi': firma,
+                    'firma': firma,
+                    'olcum_kodu': olcum_kodu,
+                    'baca_adi': rec.get('baca_adi') or baca_val,
+                    'baca_no': rec.get('baca_no') or baca_val,
+                    'parametre_adi': [],
+                    'parametre': [],
+                    'kayit_tarihi': full_tarih,
+                    'personel_adi': (rec.get('personel_adi') or '').strip(),
+                }
+
+            group = groups[key]
+
+            rec_id = str(rec.get('id') or '').strip()
+            if rec_id:
+                group['ids'].append(rec_id)
+                if group['id'] is None:
+                    group['id'] = rec_id
+
+            param_val = (rec.get('parametre_adi') or rec.get('parametre') or '').strip()
+            if param_val and param_val not in group['parametre_adi']:
+                group['parametre_adi'].append(param_val)
+    else:
+        # 2) Baca verisi yoksa, firma_olcum.json üzerinden özet üret
+        try:
+            firma_olcumler = load_firma_olcum()
+        except Exception:
+            firma_olcumler = []
+
+        for olcum in firma_olcumler:
+            firma = (olcum.get('firma_adi') or '').strip()
+            olcum_kodu = str(olcum.get('olcum_kodu') or '').strip()
+            bas_tarih = (olcum.get('baslangic_tarihi') or '').strip()
+            created_at = (olcum.get('olusturma_tarihi') or '').strip()
+            full_tarih = created_at or bas_tarih
+            tarih_key = full_tarih[:19] if full_tarih else ''
+
+            baca_parametreleri = olcum.get('baca_parametreleri') or {}
+            if not isinstance(baca_parametreleri, dict):
+                continue
+
+            for baca_no, param_list in baca_parametreleri.items():
+                baca_val = str(baca_no or '').strip()
+                key = (firma, olcum_kodu, baca_val, tarih_key)
+
+                if key not in groups:
+                    # Firma ölçüm kayıtlarının kendi ID'sini grup ID'si olarak kullan
+                    group_id = f"{olcum.get('id','')}::{baca_val or '-'}::{tarih_key}"
+                    groups[key] = {
+                        'id': group_id,
+                        'ids': [],  # Henüz gerçek baca_bilgileri kaydı yok
+                        'firma_adi': firma,
+                        'firma': firma,
+                        'olcum_kodu': olcum_kodu,
+                        'baca_adi': baca_val,
+                        'baca_no': baca_val,
+                        'parametre_adi': [],
+                        'parametre': [],
+                        'kayit_tarihi': full_tarih,
+                        'personel_adi': ', '.join(olcum.get('personel') or []),
+                    }
+
+                group = groups[key]
+                # Parametre isimlerini topla
+                for p in (param_list or []):
+                    p_val = str(p or '').strip()
+                    if p_val and p_val not in group['parametre_adi']:
+                        group['parametre_adi'].append(p_val)
+
+    result = []
+    for group in groups.values():
+        raw_params = group.get('parametre_adi') or []
+
+        def _format_param(p):
+            text = str(p or '')
+            text = text.replace('_', ' ')
+            # Harf ve rakamın bitişik olduğu son ekleri ayır ("EPA5" -> "EPA 5")
+            text = re.sub(r"([A-Za-zÇĞİÖŞÜçğıöşü])([0-9])", r"\1 \2", text)
+            return text.upper().strip()
+
+        formatted_params = [_format_param(p) for p in raw_params if str(p or '').strip()]
+        joined = ', '.join(formatted_params)
+
+        group['parametre_adi'] = joined
+        group['parametre'] = joined
+        result.append(group)
+
+    # Firma / ölçüm / baca sırasına göre sırala
+    result.sort(key=lambda r: (
+        (r.get('firma_adi') or ''),
+        (r.get('olcum_kodu') or ''),
+        (r.get('baca_adi') or r.get('baca_no') or ''),
+    ))
+
+    return result
 
 def load_parametre_olcum():
     """Parametre ölçüm verilerini JSON dosyasından yükler."""
@@ -318,254 +540,28 @@ def save_parametre_olcum(parametre_olcum_data):
         print(f"Parametre ölçüm verileri kaydedilirken hata: {e}")
         return False
 
-def load_teklif():
-    """Teklif verilerini JSON dosyasından yükler."""
-    try:
-        if not os.path.exists(TEKLIF_FILE):
-            return []
-        with open(TEKLIF_FILE, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            if not isinstance(data, list):
-                return []
-            return data
-    except Exception as e:
-        print(f"Teklif verileri yüklenirken hata: {e}")
-        return []
+# load_teklif ve save_teklif fonksiyonları silindi
 
-def save_teklif(teklif_data):
-    """Teklif verilerini JSON dosyasına kaydeder."""
-    try:
-        if not isinstance(teklif_data, list):
-            print("Hata: teklif_data liste olmalıdır")
-            return False
-        with open(TEKLIF_FILE, 'w', encoding='utf-8') as f:
-            json.dump(teklif_data, f, indent=4, ensure_ascii=False)
-        return True
-    except Exception as e:
-        print(f"Teklif verileri kaydedilirken hata: {e}")
-        return False
+# load_used_teklif_numbers fonksiyonu silindi
+# save_used_teklif_numbers fonksiyonu silindi
 
-def load_used_teklif_numbers():
-    """Kullanılmış teklif numaralarını yükler (silinen teklifler dahil)"""
-    try:
-        used_numbers_file = USED_TEKLIF_NUMBERS_FILE
-        if not os.path.exists(used_numbers_file):
-            return set()
-        with open(used_numbers_file, 'r', encoding='utf-8') as f:
-            return set(json.load(f))
-    except Exception as e:
-        print(f"Kullanılmış teklif numaraları yüklenirken hata: {e}")
-        return set()
+# generate_teklif_no fonksiyonu silindi
+# generate_teklif_no fonksiyonu içeriği silindi
 
-def save_used_teklif_numbers(used_numbers):
-    """Kullanılmış teklif numaralarını kaydeder"""
-    try:
-        used_numbers_file = USED_TEKLIF_NUMBERS_FILE
-        with open(used_numbers_file, 'w', encoding='utf-8') as f:
-            json.dump(list(used_numbers), f, ensure_ascii=False, indent=2)
-        return True
-    except Exception as e:
-        print(f"Kullanılmış teklif numaraları kaydedilirken hata: {e}")
-        return False
+# reserve_teklif_no fonksiyonu silindi
+# reserve_teklif_no fonksiyonu içeriği silindi
 
-def generate_teklif_no():
-    """Yeni teklif numarası oluşturur (TE25-01, TE26-01 formatında) - BENZERSİZ GARANTİLİ"""
-    try:
-        current_year = datetime.now().year
-        year_suffix = str(current_year)[-2:]  # 25, 26, 27...
-        
-        # Mevcut teklifleri yükle
-        teklifler = load_teklif()
-        
-        # Mevcut tekliflerdeki numaraları topla (basit sistem)
-        used_numbers = set()
-        for teklif in teklifler:
-            teklif_no = teklif.get('teklif_no', '')
-            if teklif_no:
-                used_numbers.add(teklif_no)
-        
-        # Bu yıl için kullanılmamış en küçük numarayı bul (3 haneli format)
-        number = 1
-        while True:
-            new_teklif_no = f'TE{year_suffix}-{number:03d}'
-            if new_teklif_no not in used_numbers:
-                return new_teklif_no
-            number += 1
-            
-            # Güvenlik için maksimum 999'a kadar dene
-            if number > 999:
-                raise Exception("Teklif numarası limiti aşıldı!")
-        
-    except Exception as e:
-        print(f"Teklif numarası oluşturulurken hata: {e}")
-    # Hata durumunda varsayılan format (3 haneli)
-    current_year = datetime.now().year
-    year_suffix = str(current_year)[-2:]
-    return f'TE{year_suffix}-001'
+# release_teklif_no fonksiyonu silindi
+# release_teklif_no fonksiyonu içeriği silindi
 
-def reserve_teklif_no():
-    """Teklif numarasını rezerve eder (henüz kullanılmamış, sadece rezerve)"""
-    try:
-        current_year = datetime.now().year
-        year_suffix = str(current_year)[-2:]
-        
-        # Mevcut teklifleri yükle
-        teklifler = load_teklif()
-        
-        # Kullanılmış tüm numaraları yükle
-        used_numbers = load_used_teklif_numbers()
-        
-        # Mevcut tekliflerdeki numaraları da ekle
-        for teklif in teklifler:
-            teklif_no = teklif.get('teklif_no', '')
-            if teklif_no:
-                used_numbers.add(teklif_no)
-        
-        # Bu yıl için kullanılmamış en küçük numarayı bul ve rezerve et (3 haneli format)
-        number = 1
-        while True:
-            new_teklif_no = f'TE{year_suffix}-{number:03d}'
-            if new_teklif_no not in used_numbers:
-                # Bu numarayı rezerve et (kullanılmış olarak işaretle)
-                used_numbers.add(new_teklif_no)
-                save_used_teklif_numbers(used_numbers)
-                print(f"Teklif numarası rezerve edildi: {new_teklif_no}")
-                return new_teklif_no
-            number += 1
-            
-            # Güvenlik için maksimum 999'a kadar dene
-            if number > 999:
-                raise Exception("Teklif numarası limiti aşıldı!")
-                
-    except Exception as e:
-        print(f"Teklif numarası rezerve edilirken hata: {e}")
-        # Hata durumunda varsayılan numara (3 haneli)
-        current_year = datetime.now().year
-        year_suffix = str(current_year)[-2:]
-        return f'TE{year_suffix}-001'
+# migrate_existing_teklif_numbers fonksiyonu silindi
+# migrate_existing_teklif_numbers fonksiyonu içeriği silindi
 
-def release_teklif_no(teklif_no):
-    """Rezerve edilmiş teklif numarasını serbest bırakır (vazgeçme durumunda)"""
-    try:
-        used_numbers = load_used_teklif_numbers()
-        
-        # Eğer bu numara kullanılmış numaralar listesindeyse, çıkar
-        if teklif_no in used_numbers:
-            used_numbers.remove(teklif_no)
-            save_used_teklif_numbers(used_numbers)
-            print(f"Teklif numarası serbest bırakıldı: {teklif_no}")
-            return True
-        else:
-            print(f"Teklif numarası zaten serbest: {teklif_no}")
-            return False
-            
-    except Exception as e:
-        print(f"Teklif numarası serbest bırakılırken hata: {e}")
-        return False
+# convert_teklif_numbers_to_3_digit fonksiyonu silindi
+# convert_teklif_numbers_to_3_digit fonksiyonu içeriği silindi
 
-def migrate_existing_teklif_numbers():
-    """Mevcut teklif numaralarını kullanılmış numaralar dosyasına ekler (tek seferlik)"""
-    try:
-        teklifler = load_teklif()
-        used_numbers = load_used_teklif_numbers()
-        
-        # Mevcut teklif numaralarını ekle
-        for teklif in teklifler:
-            teklif_no = teklif.get('teklif_no', '')
-            if teklif_no:
-                used_numbers.add(teklif_no)
-        
-        # Kaydet
-        save_used_teklif_numbers(used_numbers)
-        print(f"Migration tamamlandı: {len(used_numbers)} teklif numarası kaydedildi")
-        
-    except Exception as e:
-        print(f"Migration hatası: {e}")
-
-def convert_teklif_numbers_to_3_digit():
-    """Mevcut teklif numaralarını 3 haneli formata dönüştürür"""
-    try:
-        teklifler = load_teklif()
-        updated_count = 0
-        
-        for teklif in teklifler:
-            teklif_no = teklif.get('teklif_no', '')
-            if teklif_no and '-' in teklif_no:
-                # TE25-89 -> TE25-089 formatına dönüştür
-                parts = teklif_no.split('-')
-                if len(parts) == 2:
-                    prefix = parts[0]  # TE25
-                    number = parts[1]  # 89
-                    
-                    # Eğer 2 haneli ise 3 haneli yap
-                    if len(number) == 2:
-                        new_number = f"{prefix}-{number.zfill(3)}"  # TE25-089
-                        teklif['teklif_no'] = new_number
-                        updated_count += 1
-                        print(f"Teklif numarası güncellendi: {teklif_no} -> {new_number}")
-        
-        if updated_count > 0:
-            # Güncellenmiş teklifleri kaydet
-            save_teklif(teklifler)
-            
-            # Kullanılmış numaralar listesini de güncelle
-            used_numbers = load_used_teklif_numbers()
-            new_used_numbers = set()
-            
-            for num in used_numbers:
-                if '-' in num:
-                    parts = num.split('-')
-                    if len(parts) == 2 and len(parts[1]) == 2:
-                        new_num = f"{parts[0]}-{parts[1].zfill(3)}"
-                        new_used_numbers.add(new_num)
-                    else:
-                        new_used_numbers.add(num)
-                else:
-                    new_used_numbers.add(num)
-            
-            save_used_teklif_numbers(new_used_numbers)
-            print(f"Teklif numarası formatı dönüştürüldü: {updated_count} teklif güncellendi")
-        else:
-            print("Dönüştürülecek teklif numarası bulunamadı")
-            
-    except Exception as e:
-        print(f"Teklif numarası dönüştürme hatası: {e}")
-
-def resequence_teklif_numbers():
-    """Mevcut teklifleri 001'den başlayarak yeniden sıralar"""
-    try:
-        teklifler = load_teklif()
-        current_year = datetime.now().year
-        year_suffix = str(current_year)[-2:]
-        
-        if not teklifler:
-            print("Sıralanacak teklif bulunamadı")
-            return
-        
-        # Teklifleri tarihe göre sırala (en eskiden en yeniye)
-        teklifler.sort(key=lambda x: x.get('teklif_tarihi', ''))
-        
-        # Yeni numaraları ata
-        new_used_numbers = set()
-        for i, teklif in enumerate(teklifler, 1):
-            old_number = teklif.get('teklif_no', '')
-            new_number = f'TE{year_suffix}-{i:03d}'
-            
-            teklif['teklif_no'] = new_number
-            new_used_numbers.add(new_number)
-            
-            print(f"Teklif sıralandı: {old_number} -> {new_number} ({teklif.get('firma_adi', 'Bilinmeyen')})")
-        
-        # Güncellenmiş teklifleri kaydet
-        save_teklif(teklifler)
-        
-        # Kullanılmış numaralar listesini güncelle
-        save_used_teklif_numbers(new_used_numbers)
-        
-        print(f"Teklif sıralaması tamamlandı: {len(teklifler)} teklif 001'den başlayarak sıralandı")
-        
-    except Exception as e:
-        print(f"Teklif sıralama hatası: {e}")
+# resequence_teklif_numbers fonksiyonu silindi
+# resequence_teklif_numbers fonksiyonu içeriği silindi
 
 def format_tarih_gg_aa_yyyy(tarih_str):
     """YYYY-MM-DD formatındaki tarihi GG.AA.YYYY formatına çevirir"""
@@ -602,7 +598,7 @@ def get_genel_hukumler():
     <li><strong>İş Güvenliği Firmanız sorumluluğundadır.</strong></li>
     <li><strong>Numuneler 30 gün saklanacaktır.</strong></li>
     <li><strong>Raporlara itiraz süresi teslim tarihinden itibaren 15 gündür.</strong></li>
-    <li><strong>Raporlar 15 iş günü içinde teslim edilecektir.</strong></li>
+    <li><strong>Raporlar 15 iş günü içinde teslim edilecektır.</strong></li>
     <li><strong>Laboratuvarımız TS EN ISO/IEC 17025 standardına uygun çalışmaktadır.</strong></li>
     <li><strong>Karar kuralları: Ölçüm sonuçları belirsizlik hesaplamaları ile birlikte değerlendirilir.</strong></li>
 </ul>"""
@@ -701,14 +697,32 @@ def login():
                 user = user_data
                 original_username = stored_username
                 break
-        
-        if user and user['password'] == password:
+
+        login_ok = False
+
+        if user:
+            # Admin kendi şifresiyle giriş yapar
+            if original_username == 'admin':
+                if user.get('password') == password:
+                    login_ok = True
+            else:
+                # Diğer kullanıcılar için aktif 6 haneli giriş şifresi zorunlu
+                access_info = load_access_code() or {}
+                active_code = str(access_info.get('code') or '').strip()
+
+                if not active_code:
+                    error = 'Giriş şifresi henüz oluşturulmadı. Lütfen admin ile iletişime geçin.'
+                elif password == active_code:
+                    login_ok = True
+
+        if login_ok and user and original_username:
             session['logged_in'] = True
             session['username'] = original_username  # Orijinal kullanıcı adını kullan
-            session['role'] = user['role']
+            session['role'] = user.get('role')
             return redirect(url_for('index'))
 
-        error = 'Geçersiz kullanıcı adı veya şifre'
+        if not error:
+            error = 'Geçersiz kullanıcı adı veya şifre'
 
     return render_template('login.html', error=error)
 
@@ -716,15 +730,32 @@ def login():
 def index():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
-    
-    emissions = load_emissions()
-    
-    # Tarihleri GG.AA.YY formatında formatla
-    for emission in emissions:
-        if 'tarih' in emission:
-            emission['tarih'] = format_date_with_day(emission['tarih'])
-    
-    return render_template('index.html', username=session.get('username'), role=session.get('role'), emissions=emissions)
+    return render_template('index.html', username=session.get('username'), role=session.get('role'))
+@app.route('/api/generate_access_code', methods=['POST'])
+def api_generate_access_code():
+    """Admin için yeni 6 haneli giriş şifresi üretir ve kaydeder."""
+    if not session.get('logged_in'):
+        return jsonify({'success': False, 'message': 'Oturum bulunamadı'}), 401
+
+    # Hem role hem kullanıcı adına bakarak admin kontrolü yap
+    if session.get('role') != 'admin' and session.get('username') != 'admin':
+        return jsonify({'success': False, 'message': 'Yetkiniz yok'}), 403
+
+    try:
+        # Her çağrıda rastgele ve bağımsız 6 haneli kod üret
+        code = f"{secrets.randbelow(1_000_000):06d}"
+
+        info = {
+            'code': code,
+            'generated_at': datetime.now().isoformat(),
+            'generated_by': session.get('username') or 'admin'
+        }
+        save_access_code(info)
+
+        return jsonify({'success': True, 'code': code, 'generated_at': info['generated_at']})
+    except Exception as e:
+        print(f"Erişim şifresi üretilirken hata: {e}")
+        return jsonify({'success': False, 'message': 'Şifre oluşturulurken hata oluştu'}), 500
 
 @app.route('/logout')
 def logout():
@@ -733,17 +764,9 @@ def logout():
     session.pop('role', None)
     return redirect(url_for('login'))
 
-@app.route('/pivot')
-def pivot():
-    # Geçici olarak giriş kontrolünü devre dışı bırak
-    # if not session.get('logged_in'):
-    #     return redirect(url_for('login'))
-    # if session.get('role') != 'admin':
-    #     return redirect(url_for('index'))
-    return render_template('pivot.html', username='admin', role='admin')
 
-@app.route('/api/pivot/summary')
-def pivot_summary():
+# @app.route('/api/pivot/summary') - Pivot sistemi silindi
+# def pivot_summary(): - Pivot sistemi silindi
     if not session.get('logged_in'):
         return jsonify({'error': 'auth'}), 401
     if session.get('role') != 'admin':
@@ -767,19 +790,13 @@ def pivot_summary():
             m = (sval or '').strip().lower()
             tr_map = str.maketrans({'ı':'i','İ':'i','ş':'s','Ş':'s','ç':'c','Ç':'c','ğ':'g','Ğ':'g','ü':'u','Ü':'u','ö':'o','Ö':'o'})
             return m.translate(tr_map)
-        teklifler = load_teklif()
-        filt_teklif = [t for t in teklifler if t.get('teklif_tarihi') and in_range(t.get('teklif_tarihi'))]
-        toplam_teklif_adedi = len(filt_teklif)
-        toplam_teklif_tutari = sum(float(t.get('netToplam', 0) or 0) for t in filt_teklif)
-        accepted_list, rejected_list = [], []
-        for t in filt_teklif:
-            status = _norm(t.get('teklif_durumu',''))
-            if any(k in status for k in ['kabul','onay']):
-                accepted_list.append(t)
-            elif any(k in status for k in ['red','ret','iptal','olumsuz','kabul edilmedi','kabul edilmez']):
-                rejected_list.append(t)
-        kabul_adet = len(accepted_list)
-        red_adet = len(rejected_list)
+        # teklifler = load_teklif() - teklif sistemi silindi
+        # filt_teklif = [t for t in teklifler if t.get('teklif_tarihi') and in_range(t.get('teklif_tarihi'))]
+        toplam_teklif_adedi = 0  # teklif sistemi silindi
+        toplam_teklif_tutari = 0  # teklif sistemi silindi
+        accepted_list, rejected_list = [], []  # teklif sistemi silindi
+        kabul_adet = 0  # teklif sistemi silindi
+        red_adet = 0  # teklif sistemi silindi
         kapsam_ici = []
         kapsam_disi = []
         for t in accepted_list:
@@ -794,19 +811,8 @@ def pivot_summary():
         kapsam_disi_tutar = sum(float(t.get('netToplam', 0) or 0) for t in kapsam_disi)
         from collections import defaultdict
         parametre_ozet = defaultdict(lambda: {'adet': 0, 'toplam': 0.0})
-        for t in filt_teklif:
-            for pr in t.get('parametreler', []) or []:
-                p_ad = pr.get('parametre') or 'Bilinmiyor'
-                try:
-                    p_adet = int(pr.get('adet', 0) or 0)
-                except Exception:
-                    p_adet = 0
-                try:
-                    p_top = float(pr.get('topFiyat', 0) or 0)
-                except Exception:
-                    p_top = 0.0
-                parametre_ozet[p_ad]['adet'] += p_adet
-                parametre_ozet[p_ad]['toplam'] += p_top
+        # for t in filt_teklif: - teklif sistemi silindi
+            # for pr in t.get('parametreler', []) or []: - teklif sistemi silindi
         parametre_list = [{'parametre': k, 'adet': v['adet'], 'toplam': round(v['toplam'], 2)} for k, v in sorted(parametre_ozet.items(), key=lambda x: x[0].lower())]
         try:
             baca_list = load_baca_bilgileri()
@@ -845,8 +851,8 @@ def pivot_summary():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/admin', methods=['GET', 'POST'])
-def admin():
+# @app.route('/admin', methods=['GET', 'POST']) - Admin sistemi silindi
+# def admin(): - Admin sistemi silindi
     # Protect this route
     if session.get('role') != 'admin':
         return redirect(url_for('index'))
@@ -945,58 +951,14 @@ def admin():
     # For GET request, pass the list of users to the template
     return render_template('admin.html', username=session.get('username'), users=current_users)
 
-@app.route('/add_emission', methods=['GET', 'POST'])
-def add_emission():
-    if not session.get('logged_in') or not can_write(session.get('role')):
-        return redirect(url_for('index')) # Yetkisiz erişim
+# @app.route('/add_emission', methods=['GET', 'POST']) - Emission sistemi silindi
+# def add_emission(): - Emission sistemi silindi
 
-    if request.method == 'POST':
-        emissions = load_emissions()
-        new_emission = {
-            'id': str(uuid4()),
-            'tesis_adi': request.form['tesis_adi'],
-            'tarih': request.form['tarih'],
-            'parametre': request.form['parametre'],
-            'sonuc': request.form['sonuc'],
-            'birim': request.form['birim']
-        }
-        emissions.append(new_emission)
-        save_emissions(emissions)
-        return redirect(url_for('index'))
+# @app.route('/edit_emission/<int:emission_id>', methods=['GET', 'POST']) - Emission sistemi silindi
+# def edit_emission(emission_id): - Emission sistemi silindi
 
-    return render_template('add_emission.html', username=session.get('username'))
-
-@app.route('/edit_emission/<int:emission_id>', methods=['GET', 'POST'])
-def edit_emission(emission_id):
-    if not session.get('logged_in') or not can_edit(session.get('role')):
-        return redirect(url_for('index'))
-
-    emissions = load_emissions()
-    emission_to_edit = next((e for e in emissions if e['id'] == emission_id), None)
-
-    if not emission_to_edit:
-        return redirect(url_for('index')) # Kayıt bulunamadı
-
-    if request.method == 'POST':
-        emission_to_edit['tesis_adi'] = request.form['tesis_adi']
-        emission_to_edit['tarih'] = request.form['tarih']
-        emission_to_edit['parametre'] = request.form['parametre']
-        emission_to_edit['sonuc'] = request.form['sonuc']
-        emission_to_edit['birim'] = request.form['birim']
-        save_emissions(emissions)
-        return redirect(url_for('index'))
-
-    return render_template('edit_emission.html', username=session.get('username'), emission=emission_to_edit)
-
-@app.route('/delete_emission/<int:emission_id>')
-def delete_emission(emission_id):
-    if not session.get('logged_in') or not can_delete(session.get('role')):
-        return redirect(url_for('index'))
-
-    emissions = load_emissions()
-    emissions_to_keep = [e for e in emissions if e['id'] != emission_id]
-    save_emissions(emissions_to_keep)
-    return redirect(url_for('index'))
+# @app.route('/delete_emission/<int:emission_id>') - Emission sistemi silindi
+# def delete_emission(emission_id): - Emission sistemi silindi
 
 
 
@@ -1006,7 +968,6 @@ def parametre():
         return redirect(url_for('login'))
     current_parameters = load_parameters()
     return render_template('parametre.html', parameters=current_parameters, username=session.get('username'), role=session.get('role'))
-
 @app.route('/import_parameters', methods=['POST'])
 def import_parameters():
     if 'username' not in session:
@@ -1795,9 +1756,7 @@ def export_selected_parameters():
             as_attachment=True,
             download_name=f'secilen_parametreler_{len(selected_parameters)}_kayit.xlsx'
         )
-
-@app.route('/delete_selected_users', methods=['POST'])
-def delete_selected_users():
+# def delete_selected_users(): - Admin sistemi silindi
     if 'username' not in session:
         return jsonify({'success': False, 'error': 'Unauthorized'}), 401
     
@@ -1822,8 +1781,8 @@ def delete_selected_users():
     
     return jsonify({'success': True, 'deleted_count': deleted_count})
 
-@app.route('/export_selected_users')
-def export_selected_users():
+# @app.route('/export_selected_users') - Admin sistemi silindi
+# def export_selected_users(): - Admin sistemi silindi
     if 'username' not in session:
         return redirect(url_for('login'))
     
@@ -1861,8 +1820,8 @@ def export_selected_users():
             download_name=f'secilen_kullanicilar_{len(selected_users)}_kayit.xlsx'
         )
 
-@app.route('/export_selected_emissions')
-def export_selected_emissions():
+# @app.route('/export_selected_emissions') - Emission sistemi silindi
+# def export_selected_emissions(): - Emission sistemi silindi
     if 'username' not in session:
         return redirect(url_for('login'))
     
@@ -2011,109 +1970,8 @@ def firma_kayit():
                          cities_data=sirali_cities,
                          firma_kayitlar=firma_kayitlar)
 
-@app.route('/teklif')
-def teklif():
-    if not session.get('logged_in') or not can_read(session.get('role')):
-        return redirect(url_for('login'))
-    
-    # Teklif verilerini yükle
-    teklifler = load_teklif()
-    
-    # Firma listesini yükle (firma seçimi için)
-    firma_kayitlar = load_firma_kayit()
-    
-    return render_template('teklif.html', 
-                         username=session.get('username'), 
-                         role=session.get('role'),
-                         teklifler=teklifler,
-                         firma_kayitlar=firma_kayitlar)
 
-@app.route('/api/teklif/add', methods=['POST'])
-def add_teklif():
-    if not session.get('logged_in'):
-        return jsonify({'success': False, 'message': 'Oturum açmanız gerekiyor'})
-    
-    try:
-        data = request.get_json()
-        
-        # Yeni teklif oluştur
-        yeni_teklif = {
-            'id': str(uuid.uuid4()),
-            'teklif_tipi': data.get('teklif_tipi', ''),
-            'firma_adi': data.get('firma_adi', ''),
-            'teklif_tarihi': data.get('teklif_tarihi', ''),
-            'teklif_no': data.get('teklif_no', ''),
-            'indirim_orani': data.get('indirim_orani', ''),
-            'indirim_tipi': data.get('indirim_tipi', ''),  # TL veya %
-            'parametreler': data.get('parametreler', []),
-            'toplam': data.get('toplam', 0),
-            'indirim': data.get('indirim', 0),
-            'netToplam': data.get('netToplam', 0),
-            'teklif_giris_metni': data.get('teklif_giris_metni', ''),
-            'genel_hukumler': data.get('genel_hukumler', ''),
-            'teklif_durumu': data.get('teklif_durumu', 'BEKLEMEDE'),
-            'created_at': datetime.now().isoformat(),
-            'updated_at': datetime.now().isoformat()
-        }
-        
-        # Mevcut verileri yükle
-        teklifler = load_teklif()
-        teklifler.append(yeni_teklif)
-        
-        # Verileri kaydet
-        if save_teklif(teklifler):
-            return jsonify({'success': True, 'message': 'Teklif başarıyla kaydedildi', 'teklif': yeni_teklif})
-        else:
-            return jsonify({'success': False, 'message': 'Teklif kaydedilirken hata oluştu'})
-            
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'Hata: {str(e)}'})
 
-@app.route('/api/teklif/next_number')
-def get_next_teklif_number():
-    """Bir sonraki teklif numarasını döndürür"""
-    if not session.get('logged_in'):
-        return jsonify({'success': False, 'message': 'Oturum açmanız gerekiyor'})
-    
-    try:
-        next_number = generate_teklif_no()
-        return jsonify({'success': True, 'teklif_no': next_number})
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'Hata: {str(e)}'})
-
-@app.route('/api/teklif/reserve_number')
-def reserve_teklif_number():
-    """Teklif numarasını rezerve eder (vazgeçme durumunda serbest bırakılabilir)"""
-    if not session.get('logged_in'):
-        return jsonify({'success': False, 'message': 'Oturum açmanız gerekiyor'})
-    
-    try:
-        reserved_number = reserve_teklif_no()
-        return jsonify({'success': True, 'reserved_number': reserved_number})
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'Hata: {str(e)}'})
-
-@app.route('/api/teklif/release_number', methods=['POST'])
-def release_teklif_number():
-    """Rezerve edilmiş teklif numarasını serbest bırakır"""
-    if not session.get('logged_in'):
-        return jsonify({'success': False, 'message': 'Oturum açmanız gerekiyor'})
-    
-    try:
-        data = request.get_json()
-        teklif_no = data.get('teklif_no', '')
-        
-        if not teklif_no:
-            return jsonify({'success': False, 'message': 'Teklif numarası gerekli'})
-        
-        success = release_teklif_no(teklif_no)
-        if success:
-            return jsonify({'success': True, 'message': f'Teklif numarası serbest bırakıldı: {teklif_no}'})
-        else:
-            return jsonify({'success': False, 'message': f'Teklif numarası zaten serbest: {teklif_no}'})
-            
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'Hata: {str(e)}'})
 
 @app.route('/api/asgari_fiyatlar')
 def get_asgari_fiyatlar():
@@ -2215,58 +2073,7 @@ def delete_asgari_fiyat():
     except Exception as e:
         return jsonify({'success': False, 'message': f'Hata: {str(e)}'})
 
-@app.route('/api/teklif/detail/<teklif_id>')
-def get_teklif_detail(teklif_id):
-    """Teklif detayını getirir"""
-    if not session.get('logged_in'):
-        return jsonify({'success': False, 'message': 'Oturum açmanız gerekiyor'})
-    
-    try:
-        teklifler = load_teklif()
-        teklif = next((t for t in teklifler if t.get('id') == teklif_id), None)
-        
-        if not teklif:
-            return jsonify({'success': False, 'message': 'Teklif bulunamadı'})
-        
-        return jsonify({'success': True, 'teklif': teklif})
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'Hata: {str(e)}'})
 
-@app.route('/api/teklif/delete', methods=['POST'])
-def delete_teklif():
-    """Teklifi siler - NUMARA BENZERSİZLİĞİ GARANTİLİ"""
-    if not session.get('logged_in'):
-        return jsonify({'success': False, 'message': 'Oturum açmanız gerekiyor'})
-    
-    try:
-        data = request.get_json()
-        teklif_id = data.get('teklif_id')
-        
-        if not teklif_id:
-            return jsonify({'success': False, 'message': 'Teklif ID gerekli'})
-        
-        teklifler = load_teklif()
-        
-        # Silinecek teklifi bul ve numarasını kaydet
-        silinen_teklif = next((t for t in teklifler if t.get('id') == teklif_id), None)
-        
-        if silinen_teklif and silinen_teklif.get('teklif_no'):
-            # Kullanılmış numaralar listesine ekle (zaten ekliydi ama emin olmak için)
-            used_numbers = load_used_teklif_numbers()
-            used_numbers.add(silinen_teklif['teklif_no'])
-            save_used_teklif_numbers(used_numbers)
-            print(f"Silinen teklif numarası kalıcı olarak kaydedildi: {silinen_teklif['teklif_no']}")
-        
-        # Teklifi listeden kaldır
-        teklifler = [t for t in teklifler if t.get('id') != teklif_id]
-        
-        if save_teklif(teklifler):
-            return jsonify({'success': True, 'message': 'Teklif başarıyla silindi ve numarası korundu'})
-        else:
-            return jsonify({'success': False, 'message': 'Teklif silinirken hata oluştu'})
-            
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'Hata: {str(e)}'})
 
 # Asgari fiyat tarifesi - yıllara göre
 def load_asgari_fiyatlar():
@@ -2485,120 +2292,7 @@ def get_baca_bilgileri(firma_adi):
     except Exception as e:
         return jsonify({'success': False, 'message': f'Hata: {str(e)}'})
 
-@app.route('/api/teklif/update', methods=['POST'])
-def update_teklif():
-    """Teklifi günceller"""
-    if not session.get('logged_in'):
-        return jsonify({'success': False, 'message': 'Oturum açmanız gerekiyor'})
-    
-    try:
-        data = request.get_json()
-        teklif_id = data.get('id')
-        
-        if not teklif_id:
-            return jsonify({'success': False, 'message': 'Teklif ID gerekli'})
-        
-        teklifler = load_teklif()
-        teklif = next((t for t in teklifler if t.get('id') == teklif_id), None)
-        
-        if not teklif:
-            return jsonify({'success': False, 'message': 'Teklif bulunamadı'})
-        
-        # Teklifi güncelle
-        teklif.update({
-            'teklif_tipi': data.get('teklif_tipi', teklif.get('teklif_tipi')),
-            'firma_adi': data.get('firma_adi', teklif.get('firma_adi')),
-            'teklif_tarihi': data.get('teklif_tarihi', teklif.get('teklif_tarihi')),
-            'teklif_no': data.get('teklif_no', teklif.get('teklif_no')),
-            'indirim_orani': data.get('indirim_orani', teklif.get('indirim_orani')),
-            'indirim_tipi': data.get('indirim_tipi', teklif.get('indirim_tipi')),
-            'parametreler': data.get('parametreler', teklif.get('parametreler', [])),
-            'toplam': data.get('toplam', teklif.get('toplam', 0)),
-            'indirim': data.get('indirim', teklif.get('indirim', 0)),
-            'netToplam': data.get('netToplam', teklif.get('netToplam', 0)),
-            'teklif_giris_metni': data.get('teklif_giris_metni', teklif.get('teklif_giris_metni', '')),
-            'genel_hukumler': data.get('genel_hukumler', teklif.get('genel_hukumler', '')),
-            'teklif_durumu': data.get('teklif_durumu', teklif.get('teklif_durumu', 'BEKLEMEDE')),
-            'updated_at': datetime.now().isoformat()
-        })
-        
-        if save_teklif(teklifler):
-            return jsonify({'success': True, 'message': 'Teklif başarıyla güncellendi', 'teklif': teklif})
-        else:
-            return jsonify({'success': False, 'message': 'Teklif güncellenirken hata oluştu'})
-            
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'Hata: {str(e)}'})
 
-@app.route('/api/teklif/update_status', methods=['POST'])
-def update_teklif_status():
-    """Teklif durumunu günceller"""
-    if not session.get('logged_in'):
-        return jsonify({'success': False, 'message': 'Oturum açmanız gerekiyor'})
-    
-    try:
-        data = request.get_json()
-        teklif_id = data.get('teklif_id')
-        yeni_durum = data.get('teklif_durumu')
-        durum_tarihi = data.get('durum_tarihi')
-        
-        if not teklif_id:
-            return jsonify({'success': False, 'message': 'Teklif ID gerekli'})
-        
-        if not yeni_durum:
-            return jsonify({'success': False, 'message': 'Yeni durum gerekli'})
-        
-        teklifler = load_teklif()
-        teklif = next((t for t in teklifler if t.get('id') == teklif_id), None)
-        
-        if not teklif:
-            return jsonify({'success': False, 'message': 'Teklif bulunamadı'})
-        
-        # Durumu ve durum tarihini güncelle
-        teklif['teklif_durumu'] = yeni_durum
-        if durum_tarihi:
-            teklif['durum_tarihi'] = durum_tarihi
-        teklif['updated_at'] = datetime.now().isoformat()
-        
-        if save_teklif(teklifler):
-            return jsonify({'success': True, 'message': 'Teklif durumu başarıyla güncellendi', 'teklif': teklif})
-        else:
-            return jsonify({'success': False, 'message': 'Teklif durumu güncellenirken hata oluştu'})
-            
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'Hata: {str(e)}'})
-
-@app.route('/api/teklif/update_durum_tarihi', methods=['POST'])
-def update_teklif_durum_tarihi():
-    """Teklif durum tarihini günceller"""
-    if not session.get('logged_in'):
-        return jsonify({'success': False, 'message': 'Oturum açmanız gerekiyor'})
-    
-    try:
-        data = request.get_json()
-        teklif_id = data.get('teklif_id')
-        durum_tarihi = data.get('durum_tarihi')
-        
-        if not teklif_id:
-            return jsonify({'success': False, 'message': 'Teklif ID gerekli'})
-        
-        teklifler = load_teklif()
-        teklif = next((t for t in teklifler if t.get('id') == teklif_id), None)
-        
-        if not teklif:
-            return jsonify({'success': False, 'message': 'Teklif bulunamadı'})
-        
-        # Sadece durum tarihini güncelle
-        teklif['durum_tarihi'] = durum_tarihi
-        teklif['updated_at'] = datetime.now().isoformat()
-        
-        if save_teklif(teklifler):
-            return jsonify({'success': True, 'message': 'Durum tarihi başarıyla güncellendi', 'teklif': teklif})
-        else:
-            return jsonify({'success': False, 'message': 'Durum tarihi güncellenirken hata oluştu'})
-            
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'Hata: {str(e)}'})
 
 @app.route('/api/firma_kayit/add', methods=['POST'])
 def add_firma_kayit():
@@ -2773,10 +2467,6 @@ def add_firma_olcum_step1():
         olcum_kodu = request.form.get('olcum_kodu', '').strip()
         baslangic_tarihi = request.form.get('baslangic_tarihi', '')
         bitis_tarihi = request.form.get('bitis_tarihi', '')
-        il = request.form.get('il', '')
-        ilce = request.form.get('ilce', '')
-        yetkili = request.form.get('yetkili', '')
-        telefon = request.form.get('telefon', '')
         durum = request.form.get('durum', 'Aktif')
         secilen_personel = request.form.getlist('personel')
         
@@ -2791,10 +2481,6 @@ def add_firma_olcum_step1():
             'olcum_kodu': olcum_kodu,
             'baslangic_tarihi': baslangic_tarihi,
             'bitis_tarihi': bitis_tarihi,
-            'il': il,
-            'ilce': ilce,
-            'yetkili': yetkili,
-            'telefon': telefon,
             'durum': durum,
             'secilen_personel': secilen_personel
         }
@@ -2859,7 +2545,6 @@ def add_firma_olcum_step1():
                          saha_personeli=saha_personeli,
                          cities=sirali_cities,
                          firmalar=formatted_firmalar)
-
 @app.route('/firma_olcum/add_step2', methods=['GET', 'POST'])
 def add_firma_olcum_step2():
     if not session.get('logged_in'):
@@ -2894,10 +2579,6 @@ def add_firma_olcum_step2():
                 'olcum_kodu': temp_data['olcum_kodu'],
                 'baslangic_tarihi': temp_data['baslangic_tarihi'],
                 'bitis_tarihi': temp_data['bitis_tarihi'],
-                'il': temp_data['il'],
-                'ilce': temp_data['ilce'],
-                'yetkili': temp_data['yetkili'],
-                'telefon': temp_data['telefon'],
                 'durum': temp_data['durum'],
                 'personel': temp_data['secilen_personel'],
                 'baca_sayisi': baca_sayisi,
@@ -2911,6 +2592,43 @@ def add_firma_olcum_step2():
             firma_olcumler.append(yeni_kayit)
             if not save_firma_olcum(firma_olcumler):
                 raise Exception('Veriler kaydedilemedi')
+            
+            # Baca bilgilerini baca_bilgileri.json dosyasına kaydet
+            try:
+                # Mevcut baca bilgilerini yükle
+                try:
+                    with open('baca_bilgileri.json', 'r', encoding='utf-8') as f:
+                        baca_bilgileri = json.load(f)
+                except (FileNotFoundError, json.JSONDecodeError):
+                    baca_bilgileri = []
+                
+                # Her baca için parametreleri ekle
+                # baca_parametreleri yapısı: {"baca_adi": ["param1", "param2"]} şeklinde
+                for baca_adi, parametreler in baca_parametreleri.items():
+                    # parametreler bir liste olmalı
+                    if not isinstance(parametreler, list):
+                        parametreler = [parametreler]
+                    
+                    # Her parametre için kayıt oluştur
+                    for parametre in parametreler:
+                        baca_kayit = {
+                            'firma_adi': temp_data['firma_adi'],
+                            'olcum_kodu': temp_data['olcum_kodu'],
+                            'baca_no': baca_adi,  # baca_adi'yi baca_no olarak kullan
+                            'baca_adi': baca_adi,
+                            'parametre': parametre,
+                            'personel_adi': ', '.join(temp_data.get('secilen_personel', [])),
+                            'kayit_tarihi': datetime.now().isoformat()
+                        }
+                        baca_bilgileri.append(baca_kayit)
+                
+                # Dosyaya kaydet
+                with open('baca_bilgileri.json', 'w', encoding='utf-8') as f:
+                    json.dump(baca_bilgileri, f, ensure_ascii=False, indent=2)
+                    
+            except Exception as e:
+                print(f"Baca bilgileri kaydedilirken hata: {e}")
+                # Hata olsa da devam et
             
             # Session'dan geçici veriyi temizle
             session.pop('temp_firma_olcum', None)
@@ -3071,10 +2789,6 @@ def edit_firma_olcum(olcum_id):
             olcum_kodu = request.form.get('olcum_kodu', '').strip()
             baslangic_tarihi = request.form.get('baslangic_tarihi', '')
             bitis_tarihi = request.form.get('bitis_tarihi', '')
-            il = request.form.get('il', '')
-            ilce = request.form.get('ilce', '')
-            yetkili = request.form.get('yetkili', '')
-            telefon = request.form.get('telefon', '')
             durum = request.form.get('durum', 'Aktif')
             secilen_personel = request.form.getlist('personel')
             baca_sayisi = request.form.get('baca_sayisi', '')
@@ -3101,10 +2815,6 @@ def edit_firma_olcum(olcum_id):
             olcum['olcum_kodu'] = olcum_kodu
             olcum['baslangic_tarihi'] = baslangic_tarihi
             olcum['bitis_tarihi'] = bitis_tarihi
-            olcum['il'] = il
-            olcum['ilce'] = ilce
-            olcum['yetkili'] = yetkili
-            olcum['telefon'] = telefon
             olcum['durum'] = durum
             olcum['personel'] = secilen_personel
             olcum['baca_sayisi'] = baca_sayisi
@@ -3168,43 +2878,25 @@ def saha_olc():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
     
-    saha_olcumler = load_saha_olc()
-    return render_template('saha_olc.html', 
+    # Özet tablo için firma/ölçüm/baca bazında gruplanmış kayıtlar
+    saha_olcumler = get_saha_olcum_summary()
+    response = make_response(render_template('saha_olc.html', 
                          username=session.get('username'), 
                          role=session.get('role'),
-                         saha_olcumler=saha_olcumler)
-
-@app.route('/kk_egri')
-def kk_egri():
-    """Kalite kontrol eğrisi sayfası"""
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
+                         saha_olcumler=saha_olcumler))
     
-    return render_template('kk_egri.html', 
-                         username=session.get('username'), 
-                         role=session.get('role'))
+    # Cache'i tamamen devre dışı bırak - Her zaman yeni dosya yüklesin
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    
+    return response
 
 
-@app.route('/api/kk_parametreler')
-def api_kk_parametreler():
-    """KK parametrelerini döndür"""
-    try:
-        # Sabit KK parametreleri
-        kk_parametreler = [
-            {'id': 'o2', 'parametre_adi': 'O2', 'kk': '7.0'},
-            {'id': 'co', 'parametre_adi': 'CO', 'kk': '500'},
-            {'id': 'no', 'parametre_adi': 'NO', 'kk': '500'},
-            {'id': 'so2', 'parametre_adi': 'SO2', 'kk': '500'},
-            {'id': 'toc', 'parametre_adi': 'TOC', 'kk': '100'}
-        ]
 
-        return jsonify(kk_parametreler)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
-@app.route('/api/kk_grafik_olustur', methods=['POST'])
-def api_kk_grafik_olustur():
-    """Kalite kontrol grafiği oluştur"""
+# @app.route('/api/kk_grafik_olustur', methods=['POST']) - KK Eğri sistemi silindi
+# def api_kk_grafik_olustur(): - KK Eğri sistemi silindi
     try:
         data = request.get_json()
         parametre = data.get('parametre')
@@ -3576,10 +3268,8 @@ def api_kk_grafik_olustur():
     except Exception as e:
         print(f"KK grafik oluşturma hatası: {e}")
         return jsonify({'error': f'Grafik oluşturulurken hata oluştu: {str(e)}'}), 500
-
-@app.route('/api/kk_rapor_olustur', methods=['POST'])
-def api_kk_rapor_olustur():
-    """Kalite kontrol raporu oluştur"""
+# @app.route('/api/kk_rapor_olustur', methods=['POST']) - KK Eğri sistemi silindi
+# def api_kk_rapor_olustur(): - KK Eğri sistemi silindi
     try:
         data = request.get_json()
         parametre = data.get('parametre')
@@ -4338,7 +4028,6 @@ def export_baca_bilgileri_excel():
     
     except Exception as e:
         return jsonify({'error': f'Excel dışa aktarma hatası: {str(e)}'}), 500
-
 @app.route('/api/baca_bilgileri/export_pdf', methods=['POST'])
 def export_baca_bilgileri_pdf():
     try:
@@ -4808,6 +4497,158 @@ def api_bulk_delete_parametre_olcumleri():
         print(f"Parametre ölçümleri toplu silme hatası: {e}")
         return jsonify({'success': False, 'error': str(e)})
 
+@app.route('/api/saha_olcumleri/bulk_delete', methods=['POST'])
+def api_bulk_delete_saha_olcumleri():
+    """Saha özet ekranından seçilen ölçümler için 1-4. aşama verilerini toplu olarak siler."""
+    try:
+        data = request.get_json() or {}
+        ids = data.get('ids', [])
+
+        if not ids:
+            return jsonify({'success': False, 'message': 'Silinecek kayıt seçilmedi'})
+
+        id_set = {str(i) for i in ids}
+
+        # 1) Baca bilgileri (özet kayıtlar)
+        baca_bilgileri = load_baca_bilgileri()
+        targets = []  # Sonraki aşamalar için firma/ölçüm/baca/parametre kombinasyonları
+        remaining_baca = []
+
+        for rec in baca_bilgileri:
+            rec_id = rec.get('id')
+            rec_id_str = str(rec_id) if rec_id is not None else None
+
+            if rec_id_str and rec_id_str in id_set:
+                firma = (rec.get('firma_adi') or rec.get('firma') or '').strip()
+                olcum_kodu = (rec.get('olcum_kodu') or '').strip()
+                baca = (rec.get('baca_adi') or rec.get('baca_no') or '').strip()
+                parametre = (rec.get('parametre_adi') or rec.get('parametre') or '').strip()
+
+                targets.append({
+                    'firma': firma,
+                    'olcum_kodu': olcum_kodu,
+                    'baca': baca,
+                    'parametre': parametre,
+                })
+            else:
+                remaining_baca.append(rec)
+
+        deleted_baca = len(baca_bilgileri) - len(remaining_baca)
+        save_baca_bilgileri(remaining_baca)
+
+        if not targets:
+            return jsonify({'success': False, 'message': 'Seçilen ID\'lere ait kayıt bulunamadı'}), 404
+
+        # Ortak anahtar kümeleri
+        combo_set = {
+            (t['firma'], t['olcum_kodu'], t['baca'])
+            for t in targets
+        }
+        param_combo_set = {
+            (t['firma'], t['olcum_kodu'], t['baca'], t['parametre'])
+            for t in targets if t['parametre']
+        }
+
+        def load_json_list(path):
+            if not os.path.exists(path):
+                return []
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    content = f.read().strip()
+                    if not content:
+                        return []
+                    return json.loads(content)
+            except (FileNotFoundError, json.JSONDecodeError):
+                return []
+
+        def save_json_list(path, data):
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+
+        # 2) 1. Aşama verileri (asama_verileri.json, asama == 1)
+        asama1_path = 'asama_verileri.json'
+        asama1_veriler = load_json_list(asama1_path)
+        before_asama1 = len(asama1_veriler)
+        asama1_veriler = [
+            r for r in asama1_veriler
+            if not (
+                r.get('asama') == 1 and
+                ( (r.get('firma') or '').strip(),
+                  (r.get('olcum_kodu') or '').strip(),
+                  (r.get('baca') or r.get('bacaNo') or '').strip() ) in combo_set
+            )
+        ]
+        deleted_asama1 = before_asama1 - len(asama1_veriler)
+        if deleted_asama1:
+            save_json_list(asama1_path, asama1_veriler)
+
+        # 3) 2. Aşama verileri (asama2_verileri.json, asama == 2)
+        asama2_path = 'asama2_verileri.json'
+        asama2_veriler = load_json_list(asama2_path)
+        before_asama2 = len(asama2_veriler)
+        asama2_veriler = [
+            r for r in asama2_veriler
+            if not (
+                r.get('asama') == 2 and
+                ( (r.get('firma') or '').strip(),
+                  (r.get('olcum_kodu') or '').strip(),
+                  (r.get('baca') or '').strip() ) in combo_set
+            )
+        ]
+        deleted_asama2 = before_asama2 - len(asama2_veriler)
+        if deleted_asama2:
+            save_json_list(asama2_path, asama2_veriler)
+
+        # 4) 3. Aşama verileri (asama3_verileri.json, asama == 3)
+        asama3_path = 'asama3_verileri.json'
+        asama3_veriler = load_json_list(asama3_path)
+        before_asama3 = len(asama3_veriler)
+        asama3_veriler = [
+            r for r in asama3_veriler
+            if not (
+                r.get('asama') == 3 and
+                ( (r.get('firma') or '').strip(),
+                  (r.get('olcum_kodu') or '').strip(),
+                  (r.get('baca') or '').strip() ) in combo_set
+            )
+        ]
+        deleted_asama3 = before_asama3 - len(asama3_veriler)
+        if deleted_asama3:
+            save_json_list(asama3_path, asama3_veriler)
+
+        # 5) 4. Aşama / parametre ölçümleri (parametre_olcum.json)
+        parametre_olcumleri = load_parametre_olcum()
+        before_param = len(parametre_olcumleri)
+        parametre_olcumleri = [
+            r for r in parametre_olcumleri
+            if (
+                ( (r.get('firma_adi') or r.get('firma') or '').strip(),
+                  (r.get('olcum_kodu') or '').strip(),
+                  (r.get('baca_adi') or r.get('baca_no') or r.get('baca') or '').strip(),
+                  (r.get('parametre_adi') or r.get('parametre') or '').strip() )
+                not in param_combo_set
+            )
+        ]
+        deleted_param = before_param - len(parametre_olcumleri)
+        if deleted_param:
+            save_parametre_olcum(parametre_olcumleri)
+
+        return jsonify({
+            'success': True,
+            'message': 'Seçili ölçüm ve ilgili aşama verileri silindi',
+            'deleted': {
+                'baca_bilgileri': deleted_baca,
+                'asama1': deleted_asama1,
+                'asama2': deleted_asama2,
+                'asama3': deleted_asama3,
+                'parametre_olcum': deleted_param,
+            }
+        })
+
+    except Exception as e:
+        print(f"Saha ölçümleri toplu silme hatası: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
+
 @app.route('/save_baca_bilgileri_saha', methods=['POST'])
 def save_baca_bilgileri_saha():
     """Saha ölçümü için baca bilgilerini kaydeder."""
@@ -4932,53 +4773,6 @@ def update_parametre_olcum_personel(firma_adi, olcum_kodu, baca_adi, personel_ad
     except Exception as e:
         print(f"Parametre ölçüm kayıtları güncellenirken hata: {str(e)}")
 
-def sync_all_parametre_personel():
-    """Tüm parametre ölçüm kayıtlarını baca bilgileriyle senkronize eder."""
-    try:
-        # Baca bilgilerini yükle
-        baca_bilgileri = load_baca_bilgileri()
-        
-        # Parametre ölçümlerini yükle
-        parametre_olcumleri = load_parametre_olcum()
-        
-        # Firma + Ölçüm kodu -> Personel adı eşleştirmesi
-        personel_map = {}
-        for baca in baca_bilgileri:
-            firma = baca.get('firma_adi', '').strip()
-            olcum = baca.get('olcum_kodu', '').strip()
-            personel = baca.get('personel_adi', '').strip()
-            
-            if firma and olcum and personel:
-                key = f"{firma}||{olcum}"
-                personel_map[key] = personel
-        
-        print(f"Personel eşleştirmesi: {personel_map}")
-        
-        # Güncellenen kayıt sayısı
-        updated_count = 0
-        
-        # Tüm parametre ölçüm kayıtlarını güncelle
-        for record in parametre_olcumleri:
-            firma = record.get('firma_adi', '').strip()
-            olcum = record.get('olcum_kodu', '').strip()
-            
-            if firma and olcum:
-                key = f"{firma}||{olcum}"
-                if key in personel_map:
-                    # Personel adını güncelle
-                    record['personel_adi'] = personel_map[key]
-                    updated_count += 1
-        
-        # Güncellenmiş verileri kaydet
-        if updated_count > 0:
-            save_parametre_olcum(parametre_olcumleri)
-            print(f"Tüm parametre ölçüm kayıtları senkronize edildi: {updated_count} kayıt")
-        else:
-            print("Senkronize edilecek kayıt bulunamadı")
-            
-    except Exception as e:
-        print(f"Parametre ölçüm kayıtları senkronize edilirken hata: {str(e)}")
-
 def cleanup_orphaned_parametre_personel():
     """Baca bilgilerinde olmayan personel isimlerini parametre ölçümlerinden temizler."""
     try:
@@ -5018,48 +4812,333 @@ def cleanup_orphaned_parametre_personel():
     except Exception as e:
         print(f"Geçersiz personel isimleri temizlenirken hata: {str(e)}")
 
-@app.route('/api/sync_parametre_personel', methods=['POST'])
-def api_sync_parametre_personel():
-    """Tüm parametre ölçüm kayıtlarını baca bilgileriyle senkronize eder."""
-    try:
-        sync_all_parametre_personel()
-        return jsonify({'success': True, 'message': 'Parametre ölçüm kayıtları senkronize edildi'})
-    except Exception as e:
-        print(f"Senkronizasyon hatası: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)})
-
-@app.route('/formlar')
-def formlar():
-    """Formlar sayfası - Ana sekme"""
+@app.route('/ayarlar', methods=['GET', 'POST'])
+def ayarlar():
+    """Ayarlar sayfası."""
     if not session.get('logged_in'):
         return redirect(url_for('login'))
-    
-    # Kullanıcıları yükle
+
     users = load_users()
-    
-    # Parametreleri yükle
     parameters = load_parameters()
-    
-    # Tekrar eden parametre adlarını kaldır (sadece benzersiz olanları al)
+    baca_paralar = load_baca_paralar()
+    access_info = load_access_code() or {}
+
     unique_parameters = []
     seen_names = set()
-    
+
     for param in parameters:
         param_name = param.get('Parametre Adı', '')
         if param_name and param_name not in seen_names:
             seen_names.add(param_name)
             unique_parameters.append(param)
-    
-    # Baca parametrelerini yükle
-    baca_paralar = load_baca_paralar()
-    
-    return render_template('formlar.html', 
-                         username=session.get('username'), 
-                         role=session.get('role'),
-                         users=users,
-                         parameters=parameters,
-                         unique_parameters=unique_parameters,
-                         baca_paralar=baca_paralar)
+
+    # Kullanıcı yönetimi formundan gelen POST isteklerini işle
+    if request.method == 'POST':
+        # Sadece admin kullanıcı kullanıcı yönetimi yapabilsin
+        if session.get('username') != 'admin' and session.get('role') != 'admin':
+            flash('Bu işlem için yetkiniz yok.', 'danger')
+            return redirect(url_for('ayarlar'))
+
+        current_users = load_users()
+        action = request.form.get('action')
+
+        if action == 'add_user':
+            username = (request.form.get('username') or '').strip()
+            password = (request.form.get('password') or '').strip()
+            surname = (request.form.get('surname') or '').strip()
+            gorev = (request.form.get('gorev') or '').strip()
+            role = (request.form.get('role') or '').strip()
+            asg_fiyat = (request.form.get('asgFiyat') or '').strip()
+
+            imza_filename = None
+            if 'imza' in request.files and request.files['imza'].filename:
+                imza_file = request.files['imza']
+                if imza_file and allowed_file(imza_file.filename, {'png', 'jpg', 'jpeg', 'gif'}):
+                    filename = secure_filename(imza_file.filename)
+                    imza_filename = f"{username}_{filename}"
+                    signatures_dir = os.path.join('static', 'images', 'signatures')
+                    os.makedirs(signatures_dir, exist_ok=True)
+                    imza_file.save(os.path.join(signatures_dir, imza_filename))
+
+            if username and password and username not in current_users:
+                current_users[username] = {
+                    'password': password,
+                    'role': role or '1',
+                    'surname': surname,
+                    'gorev': gorev,
+                    'imza': imza_filename,
+                    'asgFiyat': asg_fiyat
+                }
+                save_users(current_users)
+                flash(f'Kullanıcı "{username}" başarıyla eklendi!', 'success')
+            else:
+                flash('Kullanıcı adı zaten mevcut veya eksik bilgi!', 'danger')
+
+        elif action == 'update_user':
+            username = (request.form.get('edit_username') or request.form.get('username') or '').strip()
+            if username in current_users:
+                if request.form.get('password'):
+                    current_users[username]['password'] = request.form.get('password')
+                current_users[username]['role'] = (request.form.get('role') or current_users[username].get('role'))
+                current_users[username]['surname'] = request.form.get('surname', '')
+                current_users[username]['gorev'] = request.form.get('gorev', '')
+                current_users[username]['asgFiyat'] = request.form.get('asgFiyat', '')
+
+                if 'imza' in request.files and request.files['imza'].filename:
+                    imza_file = request.files['imza']
+                    if imza_file and allowed_file(imza_file.filename, {'png', 'jpg', 'jpeg', 'gif'}):
+                        filename = secure_filename(imza_file.filename)
+                        imza_filename = f"{username}_{filename}"
+                        signatures_dir = os.path.join('static', 'images', 'signatures')
+                        os.makedirs(signatures_dir, exist_ok=True)
+                        old_imza = current_users[username].get('imza')
+                        if old_imza:
+                            old_imza_path = os.path.join(signatures_dir, old_imza)
+                            if os.path.exists(old_imza_path):
+                                os.remove(old_imza_path)
+                        imza_file.save(os.path.join(signatures_dir, imza_filename))
+                        current_users[username]['imza'] = imza_filename
+
+                save_users(current_users)
+                flash(f'Kullanıcı "{username}" başarıyla güncellendi!', 'success')
+            else:
+                flash('Kullanıcı güncellenemedi!', 'danger')
+
+        return redirect(url_for('ayarlar'))
+
+    return render_template(
+        'ayarlar.html',
+        username=session.get('username'),
+        role=session.get('role'),
+        users=users,
+        parameters=parameters,
+        unique_parameters=unique_parameters,
+        baca_paralar=baca_paralar,
+        access_code=access_info.get('code')
+    )
+
+
+@app.route('/delete_user', methods=['POST'])
+def delete_user():
+    """Tek bir kullanıcıyı siler (admin hariç)."""
+    if not session.get('logged_in'):
+        return jsonify({'success': False, 'error': 'Oturum bulunamadı'}), 401
+
+    # Sadece admin veya rolü admin olan kullanıcı silebilsin
+    if session.get('role') != 'admin' and session.get('username') != 'admin':
+        return jsonify({'success': False, 'error': 'Yetkiniz yok'}), 403
+
+    data = request.get_json(silent=True) or {}
+    username = (data.get('username') or '').strip()
+
+    if not username:
+        return jsonify({'success': False, 'error': 'Kullanıcı adı belirtilmedi'}), 400
+    if username == 'admin':
+        return jsonify({'success': False, 'error': 'admin kullanıcısı silinemez'}), 400
+
+    current_users = load_users()
+    if username not in current_users:
+        return jsonify({'success': False, 'error': 'Kullanıcı bulunamadı'}), 404
+
+    imza_filename = None
+    if isinstance(current_users.get(username), dict):
+        imza_filename = current_users[username].get('imza')
+    if imza_filename:
+        signatures_dir = os.path.join('static', 'images', 'signatures')
+        imza_path = os.path.join(signatures_dir, imza_filename)
+        if os.path.exists(imza_path):
+            os.remove(imza_path)
+
+    del current_users[username]
+    save_users(current_users)
+
+    flash(f'Kullanıcı "{username}" başarıyla silindi!', 'success')
+    return jsonify({'success': True})
+
+
+@app.route('/delete_selected_users', methods=['POST'])
+def delete_selected_users():
+    """Birden fazla kullanıcıyı toplu olarak siler (admin hariç)."""
+    if not session.get('logged_in'):
+        return jsonify({'success': False, 'error': 'Oturum bulunamadı'}), 401
+
+    if session.get('role') != 'admin' and session.get('username') != 'admin':
+        return jsonify({'success': False, 'error': 'Yetkiniz yok'}), 403
+
+    data = request.get_json(silent=True) or {}
+    usernames = data.get('usernames') or []
+    if not usernames:
+        return jsonify({'success': False, 'error': 'Kullanıcı listesi boş'}), 400
+
+    current_users = load_users()
+    deleted_count = 0
+    signatures_dir = os.path.join('static', 'images', 'signatures')
+
+    for raw_username in usernames:
+        username = (raw_username or '').strip()
+        if not username or username == 'admin':
+            continue
+        if username in current_users:
+            imza_filename = None
+            if isinstance(current_users.get(username), dict):
+                imza_filename = current_users[username].get('imza')
+            if imza_filename:
+                imza_path = os.path.join(signatures_dir, imza_filename)
+                if os.path.exists(imza_path):
+                    os.remove(imza_path)
+            del current_users[username]
+            deleted_count += 1
+
+    save_users(current_users)
+    if deleted_count > 0:
+        flash(f'{deleted_count} kullanıcı başarıyla silindi!', 'success')
+    else:
+        flash('Silinecek kullanıcı bulunamadı.', 'warning')
+
+    return jsonify({'success': True, 'deleted_count': deleted_count})
+
+
+@app.route('/tum_sonuclar')
+def tum_sonuclar():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    try:
+        with open('asama_verileri.json', 'r', encoding='utf-8') as f:
+            content = f.read().strip()
+            if content:
+                asama_verileri = json.loads(content)
+            else:
+                asama_verileri = []
+    except (FileNotFoundError, json.JSONDecodeError):
+        asama_verileri = []
+
+    asama1_index = {}
+    for r in asama_verileri:
+        if r.get('asama') != 1:
+            continue
+        key = (
+            (r.get('firma') or '').strip(),
+            (r.get('olcum_kodu') or '').strip(),
+            (r.get('baca') or r.get('bacaNo') or '').strip()
+        )
+        asama1_index[key] = r
+
+    # 2. Aşama verileri (parametre bazlı süre, travers, nozzle, sayaç hacmi vb.)
+    try:
+        with open('asama2_verileri.json', 'r', encoding='utf-8') as f:
+            content = f.read().strip()
+            if content:
+                asama2_verileri = json.loads(content)
+            else:
+                asama2_verileri = []
+    except (FileNotFoundError, json.JSONDecodeError):
+        asama2_verileri = []
+
+    # 3. Aşama verileri
+    try:
+        with open('asama3_verileri.json', 'r', encoding='utf-8') as f:
+            content = f.read().strip()
+            if content:
+                asama3_verileri = json.loads(content)
+            else:
+                asama3_verileri = []
+    except (FileNotFoundError, json.JSONDecodeError):
+        asama3_verileri = []
+
+    # 2. Aşama parametre verileri için index (firma, ölçüm kodu, baca, temiz_parametre_adi)
+    def _clean_param_name(name: str) -> str:
+        if not name:
+            return ''
+        s = str(name).split('\n')[0].split('|')[0].strip()
+        if '-' in s:
+            s = s.split('-')[0].strip()
+        return s
+
+    asama2_index = {}
+    for a2 in asama2_verileri:
+        if a2.get('asama') != 2:
+            continue
+        firma2 = (a2.get('firma') or '').strip()
+        olcum2 = (a2.get('olcum_kodu') or '').strip()
+        baca2 = (a2.get('baca') or '').strip()
+        if not firma2 or not olcum2 or not baca2:
+            continue
+        params2 = a2.get('parametreler') or []
+        for p2 in params2:
+            ad_full = (p2.get('parametre') or p2.get('parametre_adi') or '').strip()
+            ad_clean = _clean_param_name(ad_full)
+            if not ad_clean:
+                continue
+            asama2_index[(firma2, olcum2, baca2, ad_clean)] = p2
+
+    sonuc_kayitlari = []
+    sira = 1
+    for as3 in asama3_verileri:
+        if as3.get('asama') != 3:
+            continue
+
+        firma = (as3.get('firma') or '').strip()
+        olcum_kodu = (as3.get('olcum_kodu') or '').strip()
+        baca_adi = (as3.get('baca') or '').strip()
+        if not firma or not olcum_kodu or not baca_adi:
+            continue
+
+        key = (firma, olcum_kodu, baca_adi)
+        asama1 = asama1_index.get(key, {})
+        baca_no = (asama1.get('bacaNo') or asama1.get('baca') or '').strip()
+        cihaz_no = (asama1.get('cihazSeri') or '').strip()
+
+        raw_tarih = (as3.get('kayit_tarihi') or '').strip()
+        if raw_tarih:
+            try:
+                formatted = format_date_for_eurometric(raw_tarih)
+                olcum_tarihi = (formatted or '').replace('/', '-')
+            except Exception:
+                olcum_tarihi = raw_tarih
+        else:
+            olcum_tarihi = ''
+
+        parametreler = as3.get('parametreler') or []
+        for idx, p in enumerate(parametreler):
+            parametre_adi = (p.get('parametre') or p.get('parametre_adi') or '').strip()
+            if not parametre_adi:
+                continue
+
+            parametre_clean = _clean_param_name(parametre_adi)
+            a2_param = asama2_index.get((firma, olcum_kodu, baca_adi, parametre_clean), {})
+
+            hiz = (asama1.get('ortalamaBacaHizi') or '').strip()
+            trav = (a2_param.get('traversSayisi') or '').strip()
+            nozzle = (a2_param.get('nozzleCapi') or '').strip()
+            top_hac = ''
+            if a2_param.get('sayacHacmi') is not None:
+                top_hac = str(a2_param.get('sayacHacmi')).strip()
+
+            sonuc_kayitlari.append({
+                'sira': sira,
+                'firma': firma,
+                'olcum_kodu': olcum_kodu,
+                'baca_adi': baca_adi,
+                'baca_no': baca_no,
+                'parametre': parametre_clean,
+                'baca': baca_adi,
+                'param_index': idx,
+                'hiz': hiz,
+                'trav': trav,
+                'nozzle': nozzle,
+                'top_hac': top_hac,
+                'cihaz_no': cihaz_no,
+                'olcum_tarihi': olcum_tarihi,
+            })
+            sira += 1
+
+    return render_template(
+        'tum_sonuclar.html',
+        username=session.get('username'),
+        role=session.get('role'),
+        sonuc_kayitlari=sonuc_kayitlari
+    )
+
 
 @app.route('/parametre_sahabil')
 def parametre_sahabil():
@@ -5084,7 +5163,6 @@ def parametre_sahabil():
                          username=session.get('username'), 
                          role=session.get('role'),
                          parameters=unique_parameters)
-
 @app.route('/save_parametre_sahabil', methods=['POST'])
 def save_parametre_sahabil():
     """Parametre sahabil ölçümlerini kaydeder."""
@@ -5639,8 +5717,8 @@ def export_parametre_fields():
             ['TRAVERS', '2-İMP-İ', 'CO', 'TOC(PPM)', 'SEY.GAZ.HAC', 'ORT.NEM', 'T.İÇİ-3', '', ''],
             ['B.HIZ', '2-İMP-S', 'NO', 'KK1-SPAN', 'SEY.GAZ.SIC', 'ORT.RUZ.HIZ', 'T.İÇİ-4', '', ''],
             ['B.SIC', '3-İMP-İ', 'NOX', 'KK1-SPAN', '', 'ÇEK.HACİM', 'T-DIŞ-1', '', ''],
-            ['B.BAS(KPA)', '3-İMP-S', 'SO2', 'KK2-SPAN', '', 'SYC.İLK', 'T.DIŞ-2', '', ''],
-            ['B.NEM(G/M3)', 'HAC.', 'KK1-O2', 'KK2-SPAN', '', 'SYC.SON', 'T.DIŞ-3', '', ''],
+            ['B.BAS(KPA)', '3-İMP-S', 'SO2', 'KK2-SPAN', '', 'SYC.İLK', 'T-DIŞ-2', '', ''],
+            ['B.NEM(G/M3)', 'HAC.', 'KK1-O2', 'KK2-SPAN', '', 'SYC.SON', 'T-DIŞ-3', '', ''],
             ['B.NEM(%)', '', 'KK1-CO', '', '', 'ISDL', 'TDİS-4', '', ''],
             ['SYC.HAC.', '', 'KK1-NO', '', '', '', 'İLK KURULUM', '', ''],
             ['SYC.İLK', '', 'KK1-SO2', '', '', '', '2. KURULUM', '', ''],
@@ -5691,6 +5769,576 @@ def clear_parametre_fields():
         print(f"Parametre alanları silinirken hata: {e}")
         return jsonify({'success': False, 'message': f'Silme hatası: {str(e)}'}), 500
 
+@app.route('/save_parametre_fields_table', methods=['POST'])
+def save_parametre_fields_table():
+    """Parametre sahabil tablosundaki verileri kaydeder."""
+    try:
+        data = request.get_json()
+        rows = data.get('rows', [])
+        
+        # Parametre sahabil verilerini kaydet
+        if save_parametre_sahabil(rows):
+            return jsonify({
+                'success': True, 
+                'message': f'{len(rows)} satır başarıyla kaydedildi!'
+            })
+        else:
+            return jsonify({'success': False, 'message': 'Veriler kaydedilirken hata oluştu!'}), 500
+            
+    except Exception as e:
+        print(f"Parametre sahabil tablosu kaydedilirken hata: {e}")
+        return jsonify({'success': False, 'message': f'Kaydetme hatası: {str(e)}'}), 500
+
+@app.route('/api/save_asama_data', methods=['POST'])
+def save_asama_data():
+    """Aşama verilerini kaydeder (firma-olcum_kodu-baca kombinasyonu için en son kayıt)."""
+    try:
+        data = request.get_json()
+        
+        # Aşama verilerini dosyaya kaydet - trim ile normalize et
+        asama_data = {
+            'firma': data.get('firma', '').strip(),
+            'olcum_kodu': data.get('olcum_kodu', '').strip(),
+            'baca': data.get('baca', '').strip(),
+            'personel': data.get('personel', '').strip(),
+            'asama': data.get('asama', 1),
+            'cihazSeri': data.get('cihazSeri', ''),
+            'bacaNo': data.get('bacaNo', ''),
+            'ortalamaBacaHizi': data.get('ortalamaBacaHizi', ''),
+            'bacaSicakligi': data.get('bacaSicakligi', ''),
+            'bacaMutlakBasinci': data.get('bacaMutlakBasinci', ''),
+            'nem': data.get('nem', ''),
+            'sayacGazSicakligi': data.get('sayacGazSicakligi', ''),
+            'atmosferBasinci': data.get('atmosferBasinci', ''),
+            'kayit_tarihi': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        
+        # Mevcut verileri oku - JSONDecodeError yakala
+        try:
+            with open('asama_verileri.json', 'r', encoding='utf-8') as f:
+                content = f.read().strip()
+                if not content:
+                    mevcut_veriler = []
+                else:
+                    mevcut_veriler = json.loads(content)
+        except (FileNotFoundError, json.JSONDecodeError):
+            mevcut_veriler = []
+        
+        # Aynı firma-olcum_kodu-baca-asama kombinasyonu için eski kayıtları sil
+        mevcut_veriler = [
+            record for record in mevcut_veriler
+            if not (record.get('firma', '').strip() == asama_data['firma'] and
+                    record.get('olcum_kodu', '').strip() == asama_data['olcum_kodu'] and
+                    record.get('baca', '').strip() == asama_data['baca'] and
+                    record.get('asama') == asama_data['asama'])
+        ]
+        
+        # Yeni veriyi ekle
+        mevcut_veriler.append(asama_data)
+        
+        # Dosyaya kaydet
+        with open('asama_verileri.json', 'w', encoding='utf-8') as f:
+            json.dump(mevcut_veriler, f, ensure_ascii=False, indent=2)
+        
+        return jsonify({
+            'success': True,
+            'message': f'{asama_data["firma"]} - Aşama {asama_data["asama"]} verisi kaydedildi!'
+        })
+        
+    except Exception as e:
+        print(f"Aşama verisi kaydedilirken hata: {e}")
+        return jsonify({'success': False, 'message': f'Kaydetme hatası: {str(e)}'}), 500
+
+@app.route('/api/get_latest_asama_data')
+def get_latest_asama_data():
+    """En son kaydedilen aşama verisini getirir."""
+    try:
+        # Dosyayı oku
+        try:
+            with open('asama_verileri.json', 'r', encoding='utf-8') as f:
+                veriler = json.load(f)
+            
+            if veriler:
+                # En son kaydedilen veriyi döndür
+                latest_data = veriler[-1]
+                return jsonify({
+                    'success': True,
+                    'data': latest_data
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': 'Henüz kayıtlı veri bulunamadı'
+                })
+                
+        except FileNotFoundError:
+            return jsonify({
+                'success': False,
+                'message': 'Veri dosyası bulunamadı'
+            })
+            
+    except Exception as e:
+        print(f"Aşama verisi getirilirken hata: {e}")
+        return jsonify({'success': False, 'message': f'Veri getirme hatası: {str(e)}'}), 500
+
+@app.route('/api/baca_parameters')
+def get_baca_parameters():
+    """Belirtilen firma, ölçüm kodu ve bacadaki parametreleri getirir."""
+    try:
+        firma = request.args.get('firma')
+        olcum_kodu = request.args.get('olcum_kodu')
+        baca_no = request.args.get('baca_no')
+        
+        if not firma or not olcum_kodu or not baca_no:
+            return jsonify({'success': False, 'message': 'Firma, ölçüm kodu ve baca numarası gerekli'}), 400
+        
+        print(f"Parametre arama: Firma={firma}, Ölçüm Kodu={olcum_kodu}, Baca={baca_no}")
+        
+        # Baca bilgilerini oku
+        try:
+            with open('baca_bilgileri.json', 'r', encoding='utf-8') as f:
+                baca_bilgileri = json.load(f)
+        except FileNotFoundError:
+            return jsonify({'success': False, 'message': 'Baca bilgileri dosyası bulunamadı'}), 404
+        
+        # Firma, ölçüm kodu ve baca numarasına göre parametreleri bul
+        parameters = set()
+        for record in baca_bilgileri:
+            # Hem eski format (firma) hem yeni format (firma_adi) destekle
+            record_firma = record.get('firma_adi', record.get('firma', '')).strip()
+            record_olcum = str(record.get('olcum_kodu', '')).strip()
+            record_baca = str(record.get('baca_no', '')).strip()
+            
+            # Karşılaştırma yaparken büyük/küçük harf duyarlılığını kaldır
+            if (record_firma.upper() == firma.upper() and 
+                record_olcum == str(olcum_kodu).strip() and 
+                record_baca.upper() == baca_no.upper()):
+                parametre = record.get('parametre', '').strip()
+                if parametre:
+                    parameters.add(parametre)
+                    print(f"Parametre bulundu (baca_bilgileri): {parametre}")
+        
+        # Eğer baca_bilgileri.json içinde kayıt yoksa, firma_olcum.json'daki
+        # baca_parametreleri haritasından geri dönüş (fallback) yap
+        if not parameters:
+            print(f"Hiç parametre bulunamadı, firma_olcum.json üzerinden aranıyor... Firma={firma}, Ölçüm={olcum_kodu}, Baca={baca_no}")
+            try:
+                with open('firma_olcum.json', 'r', encoding='utf-8') as f:
+                    firma_kayitlari = json.load(f)
+            except FileNotFoundError:
+                firma_kayitlari = []
+            
+            for kayit in firma_kayitlari:
+                rec_firma = str(kayit.get('firma_adi', '')).strip()
+                rec_olcum = str(kayit.get('olcum_kodu', '')).strip()
+                if rec_firma.upper() == firma.upper() and rec_olcum == str(olcum_kodu).strip():
+                    baca_haritasi = kayit.get('baca_parametreleri') or {}
+                    for baca_adi, param_list in baca_haritasi.items():
+                        if str(baca_adi).strip().upper() == baca_no.upper():
+                            if isinstance(param_list, list):
+                                for p in param_list:
+                                    p_str = str(p).strip()
+                                    if p_str:
+                                        parameters.add(p_str)
+                                        print(f"Parametre bulundu (firma_olcum fallback): {p_str}")
+                            else:
+                                p_str = str(param_list).strip()
+                                if p_str:
+                                    parameters.add(p_str)
+                                    print(f"Parametre bulundu (firma_olcum fallback): {p_str}")
+        
+        if not parameters:
+            print(f"Hiç parametre bulunamadı! Firma={firma}, Ölçüm={olcum_kodu}, Baca={baca_no}")
+            print(f"Mevcut baca_bilgileri kayıtları: {json.dumps(baca_bilgileri, indent=2, ensure_ascii=False)}")
+        
+        return jsonify({
+            'success': True,
+            'parameters': list(parameters)
+        })
+        
+    except Exception as e:
+        print(f"Baca parametreleri getirilirken hata: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Veri getirme hatası: {str(e)}'}), 500
+@app.route('/api/save_asama2_data', methods=['POST'])
+def save_asama2_data():
+    """2. Aşama verilerini kaydeder."""
+    try:
+        data = request.get_json()
+        
+        # 2. Aşama verilerini dosyaya kaydet - trim ile normalize et
+        # Tarih formatını gg/aa/yy ss:dd formatına çevir
+        def format_tarih(tarih_str):
+            if not tarih_str:
+                return tarih_str
+            try:
+                # gg.aa.yyyy ss:dd formatını gg/aa/yy ss:dd formatına çevir
+                if '.' in tarih_str and len(tarih_str.split('.')[0]) == 2:
+                    return tarih_str.replace('.', '/')[:8] + tarih_str[8:]
+                # gg/aa/yyyy ss:dd formatını gg/aa/yy ss:dd formatına çevir
+                elif '/' in tarih_str:
+                    parts = tarih_str.split('/')
+                    if len(parts) >= 3:
+                        year_part = parts[2].split(' ')[0]
+                        if len(year_part) == 4:  # gg/aa/yyyy formatı
+                            time_part = tarih_str[tarih_str.find(' '):] if ' ' in tarih_str else ''
+                            return f"{parts[0]}/{parts[1]}/{year_part[:2]}{time_part}"
+                    return tarih_str
+                # yyyy-mm-dd formatını gg/aa/yy formatına çevir
+                elif '-' in tarih_str and len(tarih_str.split('-')[0]) == 4:
+                    dt = datetime.strptime(tarih_str, '%Y-%m-%d %H:%M:%S')
+                    return dt.strftime('%d/%m/%y %H:%M')
+                else:
+                    return tarih_str
+            except:
+                return tarih_str
+        
+        # Parametreler içindeki tarihleri formatla
+        parametreler = data.get('parametreler', [])
+        for param in parametreler:
+            if 'baslangic' in param:
+                param['baslangic'] = format_tarih(param['baslangic'])
+        
+        asama2_data = {
+            'firma': data.get('firma', '').strip(),
+            'olcum_kodu': data.get('olcumKodu', '').strip(),
+            'baca': data.get('baca', '').strip(),
+            'personel': data.get('personel', '').strip(),
+            'asama': 2,
+            'parametreler': parametreler,
+            'kayit_tarihi': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        
+        # Mevcut verileri oku - JSONDecodeError yakala
+        try:
+            with open('asama2_verileri.json', 'r', encoding='utf-8') as f:
+                content = f.read().strip()
+                if not content:
+                    mevcut_veriler = []
+                else:
+                    mevcut_veriler = json.loads(content)
+        except (FileNotFoundError, json.JSONDecodeError):
+            mevcut_veriler = []
+        
+        # Aynı firma-olcum_kodu-baca kombinasyonu için mevcut kaydı bul ve güncelle
+        updated = False
+        for i, record in enumerate(mevcut_veriler):
+            if (record.get('firma', '').strip() == asama2_data['firma'] and 
+                record.get('olcum_kodu', '').strip() == asama2_data['olcum_kodu'] and
+                record.get('baca', '').strip() == asama2_data['baca'] and 
+                record.get('asama') == 2):
+                mevcut_veriler[i] = asama2_data
+                updated = True
+                break
+        
+        # Yeni kayıt ekle
+        if not updated:
+            mevcut_veriler.append(asama2_data)
+        
+        # Dosyaya kaydet
+        with open('asama2_verileri.json', 'w', encoding='utf-8') as f:
+            json.dump(mevcut_veriler, f, ensure_ascii=False, indent=2)
+        
+        return jsonify({
+            'success': True,
+            'message': f'{asama2_data["firma"]} - Baca {asama2_data["baca"]} - 2. Aşama verisi kaydedildi!'
+        })
+        
+    except Exception as e:
+        print(f"2. Aşama verisi kaydedilirken hata: {e}")
+        return jsonify({'success': False, 'message': f'Kaydetme hatası: {str(e)}'}), 500
+
+@app.route('/api/get_asama2_data')
+def get_asama2_data():
+    """Belirtilen firma-olcum_kodu-baca için 2. Aşama verisini getirir (en son kayıt)."""
+    try:
+        baca_no = request.args.get('baca_no', '').strip()
+        firma = request.args.get('firma', '').strip()
+        olcum_kodu = request.args.get('olcum_kodu', '').strip()
+        
+        if not baca_no:
+            return jsonify({'success': False, 'message': 'Baca numarası gerekli'}), 400
+        
+        # Dosyayı oku - JSONDecodeError yakala
+        try:
+            with open('asama2_verileri.json', 'r', encoding='utf-8') as f:
+                content = f.read().strip()
+                if not content:
+                    veriler = []
+                else:
+                    veriler = json.loads(content)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return jsonify({
+                'success': False,
+                'message': 'Veri dosyası bulunamadı veya bozuk'
+            })
+        
+        # Belirtilen firma-olcum_kodu-baca kombinasyonu için veriyi bul - en son kaydı döndür (kayit_tarihi'ne göre)
+        matching_records = []
+        for record in veriler:
+            if (record.get('asama') == 2 and
+                str(record.get('baca', '')).strip() == baca_no and
+                (not firma or str(record.get('firma', '')).strip() == firma) and
+                (not olcum_kodu or str(record.get('olcum_kodu', '')).strip() == olcum_kodu)):
+                matching_records.append(record)
+        
+        if matching_records:
+            # En son kaydı döndür (kayit_tarihi'ne göre sırala)
+            latest_record = max(matching_records, key=lambda r: r.get('kayit_tarihi', ''))
+            return jsonify({
+                'success': True,
+                'data': latest_record
+            })
+        
+        return jsonify({
+            'success': False,
+            'message': 'Veri bulunamadı'
+        })
+            
+    except Exception as e:
+        print(f"2. Aşama verisi getirilirken hata: {e}")
+        return jsonify({'success': False, 'message': f'Veri getirme hatası: {str(e)}'}), 500
+
+@app.route('/api/get_existing_asama1_data', methods=['GET'])
+def get_existing_asama1_data():
+    """Mevcut 1. Aşama verilerini getir (firma, ölçüm kodu, baca bazında - en son kayıt)"""
+    try:
+        firma = request.args.get('firma', '').strip()
+        olcum_kodu = request.args.get('olcum_kodu', '').strip()
+        baca = request.args.get('baca', '').strip()
+        
+        if not firma or not olcum_kodu or not baca:
+            return jsonify({'success': False, 'message': 'Firma, ölçüm kodu ve baca gerekli'})
+        
+        # asama_verileri.json dosyasını oku - JSONDecodeError yakala
+        if os.path.exists('asama_verileri.json'):
+            try:
+                with open('asama_verileri.json', 'r', encoding='utf-8') as f:
+                    content = f.read().strip()
+                    if not content:
+                        all_data = []
+                    else:
+                        all_data = json.loads(content)
+            except json.JSONDecodeError:
+                return jsonify({'success': False, 'data': None, 'message': 'Dosya bozuk'})
+        else:
+            return jsonify({'success': False, 'data': None})
+        
+        # Aynı firma-olcum_kodu-baca için eşleşen kayıtları bul
+        matching_records = []
+        for record in all_data:
+            if (str(record.get('firma', '')).strip() == firma and 
+                str(record.get('olcum_kodu', '')).strip() == olcum_kodu and 
+                str(record.get('baca', '')).strip() == baca and
+                record.get('asama') == 1):
+                matching_records.append(record)
+        
+        if matching_records:
+            # Önce ortalamaBacaHizi dolu olan kayıtları tercih et
+            def has_speed(rec):
+                val = rec.get('ortalamaBacaHizi', '')
+                return str(val).strip() != ''
+
+            records_with_speed = [r for r in matching_records if has_speed(r)]
+            source = records_with_speed or matching_records
+
+            # En son kaydı döndür (kayit_tarihi'ne göre sırala)
+            latest_record = max(source, key=lambda r: r.get('kayit_tarihi', ''))
+            return jsonify({'success': True, 'data': latest_record})
+        
+        return jsonify({'success': False, 'data': None})
+        
+    except Exception as e:
+        print(f"Mevcut 1. Aşama verileri getirme hatası: {e}")
+        return jsonify({'success': False, 'message': f'Hata: {str(e)}'})
+
+@app.route('/api/get_existing_asama2_data', methods=['GET'])
+def get_existing_asama2_data():
+    """Mevcut 2. Aşama verilerini getir (firma, ölçüm kodu, baca bazında - en son kayıt)"""
+    try:
+        firma = request.args.get('firma', '').strip()
+        olcum_kodu = request.args.get('olcum_kodu', '').strip()
+        baca = request.args.get('baca', '').strip()
+        
+        if not firma or not olcum_kodu or not baca:
+            return jsonify({'success': False, 'message': 'Firma, ölçüm kodu ve baca gerekli'})
+        
+        # asama2_verileri.json dosyasını oku - JSONDecodeError yakala
+        if os.path.exists('asama2_verileri.json'):
+            try:
+                with open('asama2_verileri.json', 'r', encoding='utf-8') as f:
+                    content = f.read().strip()
+                    if not content:
+                        all_data = []
+                    else:
+                        all_data = json.loads(content)
+            except json.JSONDecodeError:
+                return jsonify({'success': False, 'data': None, 'message': 'Dosya bozuk'})
+        else:
+            return jsonify({'success': False, 'data': None})
+        
+        # Aynı firma-olcum_kodu-baca için eşleşen kayıtları bul
+        matching_records = []
+        for record in all_data:
+            if (str(record.get('firma', '')).strip() == firma and 
+                str(record.get('olcum_kodu', '')).strip() == olcum_kodu and 
+                str(record.get('baca', '')).strip() == baca and
+                record.get('asama') == 2):
+                matching_records.append(record)
+        
+        if matching_records:
+            # En son kaydı döndür (kayit_tarihi'ne göre sırala)
+            latest_record = max(matching_records, key=lambda r: r.get('kayit_tarihi', ''))
+            return jsonify({'success': True, 'data': latest_record})
+        
+        return jsonify({'success': False, 'data': None})
+        
+    except Exception as e:
+        print(f"Mevcut 2. Aşama verileri getirme hatası: {e}")
+        return jsonify({'success': False, 'message': f'Hata: {str(e)}'})
+
+@app.route('/api/save_parametre_table', methods=['POST'])
+def save_parametre_table():
+    """Parametre tablosu verilerini kaydet"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'success': False, 'message': 'Veri bulunamadı'})
+        
+        # Parametre tablosu verilerini parametre_tablosu.json dosyasına kaydet
+        with open('parametre_tablosu.json', 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        
+        return jsonify({'success': True, 'message': 'Parametre tablosu başarıyla kaydedildi'})
+        
+    except Exception as e:
+        print(f"Parametre tablosu kaydetme hatası: {e}")
+        return jsonify({'success': False, 'message': f'Hata: {str(e)}'})
+
+@app.route('/api/load_parametre_table', methods=['GET'])
+def load_parametre_table():
+    """Parametre tablosu verilerini yükle"""
+    try:
+        # parametre_tablosu.json dosyasını oku
+        if os.path.exists('parametre_tablosu.json'):
+            with open('parametre_tablosu.json', 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            return jsonify({'success': True, 'data': data})
+        else:
+            return jsonify({'success': True, 'data': {'headers': [], 'rows': []}})
+            
+    except Exception as e:
+        print(f"Parametre tablosu yükleme hatası: {e}")
+        return jsonify({'success': False, 'message': f'Hata: {str(e)}'})
+
+@app.route('/api/save_excel_data', methods=['POST'])
+def save_excel_data():
+    """Excel benzeri tablo verilerini kaydet"""
+    try:
+        data = request.get_json()
+        
+        if not data or 'data' not in data:
+            return jsonify({'success': False, 'message': 'Veri bulunamadı'})
+        
+        # Excel verilerini excel_data.json dosyasına kaydet
+        with open('excel_data.json', 'w', encoding='utf-8') as f:
+            json.dump(data['data'], f, ensure_ascii=False, indent=2)
+        
+        return jsonify({'success': True, 'message': 'Excel verileri başarıyla kaydedildi'})
+        
+    except Exception as e:
+        print(f"Excel verileri kaydetme hatası: {e}")
+        return jsonify({'success': False, 'message': f'Hata: {str(e)}'})
+
+@app.route('/api/load_excel_data', methods=['GET'])
+def load_excel_data():
+    """Excel benzeri tablo verilerini yükle"""
+    try:
+        # excel_data.json dosyasını oku
+        if os.path.exists('excel_data.json'):
+            with open('excel_data.json', 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            return jsonify({'success': True, 'data': data, 'excelData': data})
+        else:
+            return jsonify({'success': True, 'data': [], 'excelData': []})
+            
+    except Exception as e:
+        print(f"Excel verileri yükleme hatası: {e}")
+        return jsonify({'success': False, 'message': f'Hata: {str(e)}'})
+
+@app.route('/api/get_excel_data', methods=['GET'])
+def get_excel_data():
+    """Excel verilerini sessionStorage için yükle (alias endpoint)"""
+    return load_excel_data()
+
+@app.route('/api/save_rapor_table', methods=['POST'])
+def save_rapor_table():
+    """Rapor tablosu verilerini kaydet"""
+    try:
+        payload = request.get_json()
+        if not payload or 'data' not in payload:
+            return jsonify({'success': False, 'message': 'Veri bulunamadı'})
+
+        with open('rapor_table.json', 'w', encoding='utf-8') as f:
+            json.dump(payload['data'], f, ensure_ascii=False, indent=2)
+
+        return jsonify({'success': True, 'message': 'Rapor verileri kaydedildi'})
+    except Exception as e:
+        print(f"Rapor verileri kaydetme hatası: {e}")
+        return jsonify({'success': False, 'message': f'Hata: {str(e)}'})
+
+@app.route('/api/load_rapor_table', methods=['GET'])
+def load_rapor_table():
+    """Rapor tablosu verilerini yükle"""
+    try:
+        if os.path.exists('rapor_table.json'):
+            with open('rapor_table.json', 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            return jsonify({'success': True, 'data': data})
+        return jsonify({'success': True, 'data': []})
+    except Exception as e:
+        print(f"Rapor verileri yükleme hatası: {e}")
+        return jsonify({'success': False, 'message': f'Hata: {str(e)}'})
+
+@app.route('/api/rapor2', methods=['GET', 'POST'])
+def rapor2_notes():
+    if not session.get('logged_in'):
+        return jsonify({'success': False, 'message': 'Yetkisiz'}), 401
+    if request.method == 'GET':
+        content = load_rapor2_content()
+        return jsonify({'success': True, 'content': content})
+    data = request.get_json() or {}
+    content = data.get('content', '')
+    if save_rapor2_content(content):
+        return jsonify({'success': True, 'message': 'Kaydedildi'})
+    return jsonify({'success': False, 'message': 'Kaydedilemedi'}), 500
+
+@app.route('/api/baca_paralar', methods=['GET'])
+def get_baca_paralar():
+    """Baca parametreleri listesini getir (cihaz seri no için)"""
+    try:
+        # baca_paralar.json dosyasını oku
+        if os.path.exists('baca_paralar.json'):
+            with open('baca_paralar.json', 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            # Cihaz Seri parametresini bul
+            for item in data:
+                if item.get('baca_par_adi') == 'Cihaz Seri':
+                    liste_icerigi = item.get('liste_icerigi', '')
+                    if liste_icerigi:
+                        # Virgülle ayrılmış değerleri listeye çevir
+                        cihaz_listesi = [cihaz.strip() for cihaz in liste_icerigi.split(',') if cihaz.strip()]
+                        return jsonify({'success': True, 'data': cihaz_listesi})
+            
+            return jsonify({'success': False, 'message': 'Cihaz Seri parametresi bulunamadı'})
+        
+        return jsonify({'success': False, 'message': 'baca_paralar.json dosyası bulunamadı'})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'Hata: {str(e)}'})
 
 @app.route('/export_selected_parametre_sahabil')
 def export_selected_parametre_sahabil():
@@ -5879,7 +6527,7 @@ def add_baca_para():
     """Yeni baca parametresi ekler."""
     if not can_write(session.get('role')):
         flash('Bu işlem için yetkiniz yok!', 'error')
-        return redirect(url_for('formlar'))
+        return redirect(url_for('ayarlar', tab='baca-bilgileri'))
     
     try:
         baca_par_adi = request.form.get('baca_par_adi', '').strip()
@@ -5887,7 +6535,7 @@ def add_baca_para():
         
         if not baca_par_adi:
             flash('Baca parametre adı zorunludur!', 'error')
-            return redirect(url_for('formlar'))
+            return redirect(url_for('ayarlar', tab='baca-bilgileri'))
         
         # Baca parametrelerini yükle
         baca_paralar = load_baca_paralar()
@@ -5909,14 +6557,14 @@ def add_baca_para():
         flash(f'Hata oluştu: {str(e)}', 'error')
     
     # Başarılı ekleme sonrası baca bilgileri sekmesi ile yönlendir
-    return redirect(url_for('formlar', tab='baca-bilgileri'))
+    return redirect(url_for('ayarlar', tab='baca-bilgileri'))
 
 @app.route('/edit_baca_para/<para_id>', methods=['POST'])
 def edit_baca_para(para_id):
     """Baca parametresini düzenler."""
     if not can_edit(session.get('role')):
         flash('Bu işlem için yetkiniz yok!', 'error')
-        return redirect(url_for('formlar'))
+        return redirect(url_for('ayarlar', tab='baca-bilgileri'))
     
     try:
         baca_par_adi = request.form.get('baca_par_adi', '').strip()
@@ -5924,7 +6572,7 @@ def edit_baca_para(para_id):
         
         if not baca_par_adi:
             flash('Baca parametre adı zorunludur!', 'error')
-            return redirect(url_for('formlar'))
+            return redirect(url_for('ayarlar', tab='baca-bilgileri'))
         
         # Baca parametrelerini yükle
         baca_paralar = load_baca_paralar()
@@ -5944,7 +6592,7 @@ def edit_baca_para(para_id):
         flash(f'Hata oluştu: {str(e)}', 'error')
     
     # Başarılı güncelleme sonrası baca bilgileri sekmesi ile yönlendir
-    return redirect(url_for('formlar', tab='baca-bilgileri'))
+    return redirect(url_for('ayarlar', tab='baca-bilgileri'))
 
 @app.route('/delete_baca_para/<para_id>', methods=['POST'])
 def delete_baca_para(para_id):
@@ -6010,14 +6658,14 @@ def export_baca_bilgileri():
     """Baca bilgilerini dışa aktarır."""
     if not can_read(session.get('role')):
         flash('Bu işlem için yetkiniz yok!', 'error')
-        return redirect(url_for('formlar'))
+        return redirect(url_for('ayarlar', tab='baca-bilgileri'))
     
     try:
         baca_paralar = load_baca_paralar()
         
         if not baca_paralar:
             flash('Dışa aktarılacak baca parametresi bulunamadı!', 'warning')
-            return redirect(url_for('formlar'))
+            return redirect(url_for('ayarlar', tab='baca-bilgileri'))
         
         # DataFrame oluştur
         df = pd.DataFrame(baca_paralar)
@@ -6037,8 +6685,7 @@ def export_baca_bilgileri():
         
     except Exception as e:
         flash(f'Dışa aktarma hatası: {str(e)}', 'error')
-        return redirect(url_for('formlar'))
-
+        return redirect(url_for('ayarlar', tab='baca-bilgileri'))
 def load_baca_paralar():
     """Baca parametrelerini JSON dosyasından yükler."""
     BACA_PARALAR_FILE = 'baca_paralar.json'
@@ -6372,16 +7019,6 @@ def api_bulk_delete_baca_bilgileri():
         print(f"Baca bilgileri toplu silinirken hata: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/api/forms')
-def api_forms():
-    """Form listesini döndürür."""
-    try:
-        forms = load_forms()
-        return jsonify(forms)
-    except Exception as e:
-        print(f"Formlar yüklenirken hata: {e}")
-        return jsonify({'error': str(e)}), 500
-
 # PAR_SAHA başlıklarını getir
 @app.route('/api/par_saha_headers', methods=['GET'])
 def api_get_par_saha_headers():
@@ -6403,154 +7040,6 @@ def api_save_par_saha_headers():
         return jsonify({'success': ok})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
-
-@app.route('/add_form', methods=['POST'])
-def add_form():
-    """Yeni form ekler."""
-    try:
-        formAdi = request.form.get('formAdi')
-        formKodu = request.form.get('formKodu')
-        yayinTarihi = request.form.get('yayinTarihi')
-        revizyonTarihi = request.form.get('revizyonTarihi')
-        revizyonNo = request.form.get('revizyonNo')
-        
-        if not all([formAdi, formKodu, yayinTarihi, revizyonTarihi, revizyonNo]):
-            flash('Tüm alanları doldurun!', 'error')
-            return redirect(url_for('formlar'))
-        
-        forms = load_forms()
-        new_form = {
-            'id': str(uuid4()),
-            'formAdi': formAdi,
-            'formKodu': formKodu,
-            'yayinTarihi': yayinTarihi,
-            'revizyonTarihi': revizyonTarihi,
-            'revizyonNo': revizyonNo,
-            'created_at': datetime.now().isoformat()
-        }
-        
-        forms.append(new_form)
-        
-        if save_forms(forms):
-            flash('Form başarıyla eklendi!', 'success')
-        else:
-            flash('Form eklenirken hata oluştu!', 'error')
-            
-        return redirect(url_for('formlar'))
-        
-    except Exception as e:
-        print(f"Form eklenirken hata: {e}")
-        flash('Form eklenirken hata oluştu!', 'error')
-        return redirect(url_for('formlar'))
-
-@app.route('/edit_form/<form_id>', methods=['POST'])
-def edit_form(form_id):
-    """Form düzenler."""
-    try:
-        formAdi = request.form.get('formAdi')
-        formKodu = request.form.get('formKodu')
-        yayinTarihi = request.form.get('yayinTarihi')
-        revizyonTarihi = request.form.get('revizyonTarihi')
-        revizyonNo = request.form.get('revizyonNo')
-        
-        if not all([formAdi, formKodu, yayinTarihi, revizyonTarihi, revizyonNo]):
-            flash('Tüm alanları doldurun!', 'error')
-            return redirect(url_for('formlar'))
-        
-        forms = load_forms()
-        form_index = None
-        
-        for i, form in enumerate(forms):
-            if form.get('id') == form_id:
-                form_index = i
-                break
-        
-        if form_index is not None:
-            forms[form_index].update({
-                'formAdi': formAdi,
-                'formKodu': formKodu,
-                'yayinTarihi': yayinTarihi,
-                'revizyonTarihi': revizyonTarihi,
-                'revizyonNo': revizyonNo,
-                'updated_at': datetime.now().isoformat()
-            })
-            
-            if save_forms(forms):
-                flash('Form başarıyla güncellendi!', 'success')
-            else:
-                flash('Form güncellenirken hata oluştu!', 'error')
-        else:
-            flash('Form bulunamadı!', 'error')
-            
-        return redirect(url_for('formlar'))
-        
-    except Exception as e:
-        print(f"Form güncellenirken hata: {e}")
-        flash('Form güncellenirken hata oluştu!', 'error')
-        return redirect(url_for('formlar'))
-
-@app.route('/delete_form/<form_id>', methods=['POST'])
-def delete_form(form_id):
-    """Form siler."""
-    try:
-        forms = load_forms()
-        form_to_delete = None
-        
-        for form in forms:
-            if form.get('id') == form_id:
-                form_to_delete = form
-                break
-        
-        if form_to_delete:
-            forms.remove(form_to_delete)
-            
-            if save_forms(forms):
-                return jsonify({
-                    'success': True,
-                    'message': f'"{form_to_delete.get("formAdi")}" formu başarıyla silindi'
-                })
-            else:
-                return jsonify({
-                    'success': False,
-                    'error': 'Form silinirken hata oluştu'
-                })
-        else:
-            return jsonify({
-                'success': False,
-                'error': 'Form bulunamadı'
-            })
-            
-    except Exception as e:
-        print(f"Form silinirken hata: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        })
-
-@app.route('/export_forms', methods=['POST'])
-def export_forms():
-    """Formları Excel, Word veya PDF formatında dışa aktarır."""
-    try:
-        data = request.get_json()
-        format_type = data.get('format', 'excel')
-        
-        forms = load_forms()
-        
-        if not forms:
-            return jsonify({'error': 'Dışa aktarılacak form bulunamadı'}), 404
-        
-        if format_type == 'excel':
-            return export_forms_excel(forms)
-        elif format_type == 'word':
-            return export_forms_word(forms)
-        elif format_type == 'pdf':
-            return export_forms_pdf(forms)
-        else:
-            return jsonify({'error': 'Geçersiz format'}), 400
-            
-    except Exception as e:
-        print(f"Form dışa aktarma hatası: {e}")
-        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/firma_rapor_export', methods=['POST'])
 def api_firma_rapor_export():
@@ -6801,7 +7290,6 @@ def api_firma_olcum_word_export():
         import traceback
         print(f"DEBUG: Hata detayı: {traceback.format_exc()}")
         return jsonify({'error': f'Word export hatası: {str(e)}'}), 500
-
 @app.route('/api/firma_olcum_pdf_export', methods=['POST'])
 def api_firma_olcum_pdf_export():
     """Firma ölçüm bilgilerini PDF formatında dışa aktarır."""
@@ -7554,7 +8042,6 @@ def add_baca_listesi_detail_table(doc, olcum, baca_parametreleri):
             
     except Exception as e:
         print(f"Baca listesi detay tablosu ekleme hatası: {e}")
-
 def add_baca_listesi_table(doc, olcum, olcum_parametreleri):
     """Baca listesi tablosunu ekler (özel parametre sıralaması ile)."""
     try:
@@ -8284,7 +8771,6 @@ def add_parametre_measurements_to_document(doc, baca_parametreleri):
             
     except Exception as e:
         print(f"Parametre ölçümleri ekleme hatası: {e}")
-
 def add_parametre_details_to_document(doc, parametre, baca_adi=""):
     """Her parametre için detay bilgileri ekler."""
     try:
@@ -9034,44 +9520,7 @@ def api_parametre_olcumleri_pdf_export():
     except Exception as e:
         print(f"Parametre ölçümleri PDF export hatası: {e}")
         return jsonify({'error': f'PDF export hatası: {str(e)}'}), 500
-
-@app.route('/api/teklif/yazdir/<teklif_id>', methods=['POST'])
-def yazdir_teklif(teklif_id):
-    """Teklifi Word formatında yazdırır"""
-    if not session.get('logged_in'):
-        return jsonify({'success': False, 'message': 'Oturum açmanız gerekiyor'})
-    
-    try:
-        data = request.get_json()
-        format_type = data.get('format', 'word')  # word veya pdf
-        
-        # Teklif verilerini yükle
-        teklifler = load_teklif()
-        teklif = next((t for t in teklifler if t.get('id') == teklif_id), None)
-        
-        if not teklif:
-            return jsonify({'success': False, 'message': 'Teklif bulunamadı'})
-        
-        # Firma bilgilerini al
-        firma_kayitlar = load_firma_kayit()
-        firma = next((f for f in firma_kayitlar if f.get('firmaAdi') == teklif.get('firma_adi')), None)
-        
-        # Eğer firma bulunamazsa, teklif verisindeki firma_adi'yi kullan
-        if not firma:
-            print(f"Firma bulunamadı: {teklif.get('firma_adi')}")
-            # Geçici firma objesi oluştur
-            firma = {'firmaAdi': teklif.get('firma_adi', '')}
-        
-        if format_type == 'word':
-            return create_word_teklif(teklif, firma)
-        else:
-            return create_pdf_teklif(teklif, firma)
-            
-    except Exception as e:
-        return jsonify({'success': False, 'message': f'Hata: {str(e)}'})
-
-def create_word_teklif(teklif, firma):
-    """Word formatında teklif oluşturur - Basitleştirilmiş format"""
+# create_word_teklif fonksiyonu silindi
     try:
         Document, Inches, Pt, RGBColor, WD_ALIGN_PARAGRAPH, WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL = load_docx()
         
@@ -9224,8 +9673,15 @@ def create_word_teklif(teklif, firma):
         doc.add_paragraph()
         doc.add_paragraph()
         
-        # Teklif giriş metni (3. aşamadan gelen veri) - 1. sayfada
-        giris_metni = teklif.get('teklif_giris_metni', '')
+        # Teklif giriş metni (localStorage'dan gelen veri) - 1. sayfada
+        # localStorage_data'dan giriş metnini al
+        request_data = request.get_json() or {}
+        localStorage_data = request_data.get('localStorage', {})
+        giris_metni = localStorage_data.get('teklifGirisText', '')
+        
+        # Eğer localStorage'dan gelmediyse, teklif verisinden al
+        if not giris_metni:
+            giris_metni = teklif.get('teklif_giris_metni', '')
         
         # Eğer 3. aşamadan metin varsa onu kullan, yoksa varsayılan
         if not giris_metni or giris_metni.strip() == '':
@@ -9472,10 +9928,19 @@ Hafize Demet Fazli'''
         # 3. sayfa başlangıcında 1 satır boşluk
         doc.add_paragraph()
         
+        # Başlık ekleme - içerikte zaten var
+        
 
         
-        # Genel hükümler metni (3. aşamadan gelen veri) - İyileştirilmiş
-        genel_hukumler = teklif.get('genel_hukumler', '')
+        # Genel hükümler metni (localStorage'dan gelen veri) - İyileştirilmiş
+        # localStorage_data'dan genel hükümleri al
+        request_data = request.get_json() or {}
+        localStorage_data = request_data.get('localStorage', {})
+        genel_hukumler = localStorage_data.get('genelHukumlerText', '')
+        
+        # Eğer localStorage'dan gelmediyse, teklif verisinden al
+        if not genel_hukumler:
+            genel_hukumler = teklif.get('genel_hukumler', '')
         
         # HTML'den temiz metin çıkar - Akıllı temizleme (paragraf yapısını koru)
         def clean_html_to_text(html_content):
@@ -9539,158 +10004,409 @@ Hafize Demet Fazli'''
                 clean_text = re.sub(r'\s+', ' ', clean_text)
                 return clean_text.strip()
         
-        # Genel hükümleri ekle - Gelişmiş temizleme ve bold formatlama
-        print(f"DEBUG - Genel hükümler verisi: {genel_hukumler[:200]}...")
-        if genel_hukumler and genel_hukumler.strip():
-            # HTML içeriğini parse et ve bold formatlamayı koru
-            from bs4 import BeautifulSoup
-            import re
-            
-            try:
-                # Word field tag'lerini temizle - Daha agresif
-                clean_html = genel_hukumler
-                clean_html = re.sub(r'\[if\s+!supportLists\][\s\S]*?\[endif\]', '', clean_html)
-                clean_html = re.sub(r'\[if\s+supportLists\][\s\S]*?\[endif\]', '', clean_html)
-                clean_html = re.sub(r'\[if\s+!mso\][\s\S]*?\[endif\]', '', clean_html)
-                clean_html = re.sub(r'\[if\s+mso\][\s\S]*?\[endif\]', '', clean_html)
-                clean_html = re.sub(r'<!--\[if[^>]*>.*?<!\[endif\]-->', '', clean_html, flags=re.DOTALL)
-                clean_html = re.sub(r'<!--.*?-->', '', clean_html, flags=re.DOTALL)
-                clean_html = re.sub(r'style="[^"]*"', '', clean_html)
-                clean_html = re.sub(r'class="[^"]*"', '', clean_html)
-                clean_html = re.sub(r'lang="[^"]*"', '', clean_html)
+        # Genel hükümler - GENEL_HUKUM.docx dosyasından al
+        try:
+            # GENEL_HUKUM.docx dosyasını oku
+            genel_hukum_doc_path = 'static/images/GENEL_HUKUM.docx'
+            if os.path.exists(genel_hukum_doc_path):
+                print(f"DEBUG - GENEL_HUKUM.docx dosyası bulundu, içerik alınıyor...")
                 
-                soup = BeautifulSoup(clean_html, 'html.parser')
+                # Word belgesini aç ve içeriği al
+                from docx import Document as DocxDocument
+                genel_hukum_doc = DocxDocument(genel_hukum_doc_path)
                 
-                # <p> tag'lerini bul ve işle
-                for p_tag in soup.find_all('p'):
-                    text = p_tag.get_text().strip()
-                    if text and len(text) > 3:
-                        # Paragraf oluştur
+                # Tüm paragrafları al
+                for paragraph in genel_hukum_doc.paragraphs:
+                    if paragraph.text.strip():
                         p = doc.add_paragraph()
                         
-                        # Yuvarlak madde işareti ekle (Bold)
-                        bullet_run = p.add_run('• ')
-                        bullet_run.font.name = 'Times New Roman'
-                        bullet_run.font.size = Pt(11)
-                        bullet_run.font.bold = True
+                        # Paragraf metnini al
+                        paragraph_text = paragraph.text.strip()
                         
-                        # HTML içeriğini işle - Daha akıllı parsing
-                        def process_element(element):
-                            if element.name is None:  # Text node
-                                text = element.strip()
-                                if text:
-                                    # Özel karakterleri temizle
-                                    text = text.replace('&nbsp;', ' ')
-                                    text = text.replace('&amp;', '&')
-                                    text = text.replace('&lt;', '<')
-                                    text = text.replace('&gt;', '>')
-                                    text = text.replace('&quot;', '"')
-                                    text = text.replace('&apos;', "'")
-                                    text = re.sub(r'\s+', ' ', text)
-                                    
-                                    if text.strip():
-                                        run = p.add_run(text.strip() + ' ')
-                                        # Font ve stil ayarları - Normal metin
-                                        run.font.name = 'Times New Roman'
-                                        run.font.size = Pt(11)
-                                        run.font.bold = False
-                            elif element.name in ['strong', 'b']:  # Bold tag
-                                text = element.get_text().strip()
-                                if text:
-                                    # Özel karakterleri temizle
-                                    text = text.replace('&nbsp;', ' ')
-                                    text = text.replace('&amp;', '&')
-                                    text = text.replace('&lt;', '<')
-                                    text = text.replace('&gt;', '>')
-                                    text = text.replace('&quot;', '"')
-                                    text = text.replace('&apos;', "'")
-                                    text = re.sub(r'\s+', ' ', text)
-                                    
-                                    if text.strip():
-                                        run = p.add_run(text.strip() + ' ')
-                                        # Font ve stil ayarları - Bold metin
-                                        run.font.name = 'Times New Roman'
-                                        run.font.size = Pt(11)
-                                        run.font.bold = True
-                            else:
-                                # Diğer elementler için recursive işleme
-                                for child in element.children:
-                                    process_element(child)
-                        
-                        # Tüm elementleri işle
-                        for element in p_tag.children:
-                            process_element(element)
+                        # İlk paragraf "1. GENEL HÜKÜMLER" ise başlık olarak işle
+                        if 'GENEL HÜKÜMLER' in paragraph_text and paragraph_text.startswith('1.'):
+                            # Başlık olarak ekle (madde işareti olmadan)
+                            title_run = p.add_run(paragraph_text)
+                            title_run.font.name = 'Times New Roman'
+                            title_run.font.size = Pt(11)
+                            title_run.font.bold = True
+                            title_run.font.color.rgb = RGBColor(0, 0, 0)
+                        else:
+                            # Normal madde olarak ekle
+                            # Yuvarlak madde işareti ekle (Bold)
+                            bullet_run = p.add_run('• ')
+                            bullet_run.font.name = 'Times New Roman'
+                            bullet_run.font.size = Pt(11)
+                            bullet_run.font.bold = True
+                            bullet_run.font.color.rgb = RGBColor(0, 0, 0)
+                            
+                            # Metin ekle
+                            text_run = p.add_run(paragraph_text)
+                            text_run.font.name = 'Times New Roman'
+                            text_run.font.size = Pt(11)
+                            text_run.font.bold = False
+                            text_run.font.color.rgb = RGBColor(0, 0, 0)
                         
                         # Paragraf formatını ayarla
-                        p.paragraph_format.space_after = Pt(6)  # Paragraf sonrası boşluk 1.5 satır
-                        p.paragraph_format.space_before = Pt(0)  # Paragraf öncesi boşluk sıfır
-                        p.paragraph_format.line_spacing = 1.5  # Satır aralığı 1.5
+                        p.paragraph_format.space_after = Pt(12)
+                        p.paragraph_format.space_before = Pt(0)
+                        p.paragraph_format.line_spacing = 1.15
+                        p.paragraph_format.first_line_indent = Inches(0)
+                        p.paragraph_format.left_indent = Inches(0)
+                        p.paragraph_format.right_indent = Inches(0)
                 
-                # Eğer <p> tag'i yoksa, fallback olarak basit temizleme yap
-                if not soup.find_all('p'):
-                    clean_text = re.sub(r'<[^>]+>', '', clean_html)
-                    clean_text = clean_text.replace('&nbsp;', ' ')
-                    clean_text = clean_text.replace('<br>', '\n')
-                    clean_text = clean_text.replace('<br/>', '\n')
-                    clean_text = clean_text.replace('<br />', '\n')
-                    
-                    # Satırları temizle ve paragraflara böl
-                    lines = [line.strip() for line in clean_text.split('\n') if line.strip()]
-                    if lines:
-                        for line in lines:
-                            if line:
+                print(f"DEBUG - GENEL_HUKUM.docx içeriği başarıyla eklendi")
+                
+            else:
+                print(f"DEBUG - GENEL_HUKUM.docx dosyası bulunamadı, localStorage'dan alınıyor...")
+                # Fallback: localStorage'dan al
+                localStorage_data = request_data.get('localStorage', {})
+                genel_hukumler = localStorage_data.get('genelHukumlerText', '')
+                
+                # Eğer localStorage'dan gelmediyse, teklif verisinden al
+                if not genel_hukumler:
+                    genel_hukumler = teklif.get('genel_hukumler', '')
+                
+                print(f"DEBUG - Genel hükümler verisi: {genel_hukumler[:200]}...")
+                
+                if genel_hukumler and genel_hukumler.strip():
+                    try:
+                        from bs4 import BeautifulSoup
+                        import re
+                        
+                        # HTML'i temizle ve parse et
+                        soup = BeautifulSoup(genel_hukumler, 'html.parser')
+                        
+                        # Önce <ul> ve <li> tag'lerini kontrol et
+                        ul_tags = soup.find_all('ul')
+                        
+                        if ul_tags:
+                            # <ul> tag'i varsa, <li> elementlerini işle
+                            for ul in ul_tags:
+                                li_tags = ul.find_all('li')
+                                for i, li_tag in enumerate(li_tags):
+                                    text = li_tag.get_text().strip()
+                                    if not text or len(text) < 3:
+                                        continue
+                                    
+                                    # Paragraf oluştur
+                                    p = doc.add_paragraph()
+                                    
+                                    # Yuvarlak madde işareti ekle (Bold)
+                                    bullet_run = p.add_run('• ')
+                                    bullet_run.font.name = 'Times New Roman'
+                                    bullet_run.font.size = Pt(11)
+                                    bullet_run.font.bold = True
+                                    bullet_run.font.color.rgb = RGBColor(0, 0, 0)
+                                    
+                                    # Metin ekle
+                                    text_run = p.add_run(text)
+                                    text_run.font.name = 'Times New Roman'
+                                    text_run.font.size = Pt(11)
+                                    text_run.font.bold = False
+                                    text_run.font.color.rgb = RGBColor(0, 0, 0)
+                                    
+                                    # Paragraf formatını ayarla
+                                    p.paragraph_format.space_after = Pt(12)
+                                    p.paragraph_format.space_before = Pt(0)
+                                    p.paragraph_format.line_spacing = 1.15
+                                    p.paragraph_format.first_line_indent = Inches(0)
+                                    p.paragraph_format.left_indent = Inches(0)
+                                    p.paragraph_format.right_indent = Inches(0)
+                            
+                            # <strong> tag'lerini de kontrol et (başlık için)
+                            strong_tags = soup.find_all('strong')
+                            for strong_tag in strong_tags:
+                                text = strong_tag.get_text().strip()
+                                if 'GENEL HÜKÜMLER' in text:
+                                    # Başlık olarak ekle (madde işareti olmadan)
+                                    p = doc.add_paragraph()
+                                    title_run = p.add_run(text)
+                                    title_run.font.name = 'Times New Roman'
+                                    title_run.font.size = Pt(11)
+                                    title_run.font.bold = True
+                                    title_run.font.color.rgb = RGBColor(0, 0, 0)
+                                    
+                                    # Paragraf formatını ayarla
+                                    p.paragraph_format.space_after = Pt(12)
+                                    p.paragraph_format.space_before = Pt(0)
+                                    p.paragraph_format.line_spacing = 1.15
+                                    p.paragraph_format.first_line_indent = Inches(0)
+                                    p.paragraph_format.left_indent = Inches(0)
+                                    p.paragraph_format.right_indent = Inches(0)
+                                    break
+                        
+                        # Tüm <p> tag'lerini bul
+                        paragraphs = soup.find_all('p')
+                        
+                        if paragraphs:
+                            # Her paragrafı işle
+                            for i, p_tag in enumerate(paragraphs):
+                                text = p_tag.get_text().strip()
+                                if not text or len(text) < 3:
+                                    continue
+                                
+                                # Paragraf oluştur
                                 p = doc.add_paragraph()
                                 
+                                # İlk paragraf "1. GENEL HÜKÜMLER" ise başlık olarak işle
+                                if i == 0 and 'GENEL HÜKÜMLER' in text:
+                                    # Başlık olarak ekle (madde işareti olmadan)
+                                    title_run = p.add_run(text)
+                                    title_run.font.name = 'Times New Roman'
+                                    title_run.font.size = Pt(11)
+                                    title_run.font.bold = True
+                                    title_run.font.color.rgb = RGBColor(0, 0, 0)
+                                else:
+                                    # Normal madde olarak ekle
+                                    # Yuvarlak madde işareti ekle (Bold)
+                                    bullet_run = p.add_run('• ')
+                                    bullet_run.font.name = 'Times New Roman'
+                                    bullet_run.font.size = Pt(11)
+                                    bullet_run.font.bold = True
+                                    bullet_run.font.color.rgb = RGBColor(0, 0, 0)
+                                    
+                                    # Metin ekle
+                                    text_run = p.add_run(text)
+                                    text_run.font.name = 'Times New Roman'
+                                    text_run.font.size = Pt(11)
+                                    text_run.font.bold = False
+                                    text_run.font.color.rgb = RGBColor(0, 0, 0)
+                                
+                                # Paragraf formatını ayarla
+                                p.paragraph_format.space_after = Pt(12)
+                                p.paragraph_format.space_before = Pt(0)
+                                p.paragraph_format.line_spacing = 1.15
+                                p.paragraph_format.first_line_indent = Inches(0)
+                                p.paragraph_format.left_indent = Inches(0)
+                                p.paragraph_format.right_indent = Inches(0)
+                        
+                        else:
+                            # <p> tag'i yoksa, düz metni satırlara böl
+                            clean_text = soup.get_text()
+                            lines = [line.strip() for line in clean_text.split('\n') if line.strip() and len(line.strip()) > 3]
+                            
+                            for i, line in enumerate(lines):
+                                p = doc.add_paragraph()
+                                
+                                # İlk satır "1. GENEL HÜKÜMLER" ise başlık olarak işle
+                                if i == 0 and 'GENEL HÜKÜMLER' in line:
+                                    # Başlık olarak ekle (madde işareti olmadan)
+                                    title_run = p.add_run(line)
+                                    title_run.font.name = 'Times New Roman'
+                                    title_run.font.size = Pt(11)
+                                    title_run.font.bold = True
+                                    title_run.font.color.rgb = RGBColor(0, 0, 0)
+                                else:
+                                    # Normal madde olarak ekle
+                                    # Yuvarlak madde işareti ekle (Bold)
+                                    bullet_run = p.add_run('• ')
+                                    bullet_run.font.name = 'Times New Roman'
+                                    bullet_run.font.size = Pt(11)
+                                    bullet_run.font.bold = True
+                                    bullet_run.font.color.rgb = RGBColor(0, 0, 0)
+                                    
+                                    # Metin ekle
+                                    text_run = p.add_run(line)
+                                    text_run.font.name = 'Times New Roman'
+                                    text_run.font.size = Pt(11)
+                                    text_run.font.bold = False
+                                    text_run.font.color.rgb = RGBColor(0, 0, 0)
+                                
+                                # Paragraf formatını ayarla
+                                p.paragraph_format.space_after = Pt(12)
+                                p.paragraph_format.space_before = Pt(0)
+                                p.paragraph_format.line_spacing = 1.15
+                                p.paragraph_format.first_line_indent = Inches(0)
+                                p.paragraph_format.left_indent = Inches(0)
+                                p.paragraph_format.right_indent = Inches(0)
+                        
+                    except Exception as e:
+                        print(f"localStorage genel hükümler formatlaması hatası: {e}")
+                        # Fallback: Basit madde işaretli liste
+                        clean_text = re.sub(r'<[^>]+>', '', genel_hukumler)
+                        lines = [line.strip() for line in clean_text.split('\n') if line.strip() and len(line.strip()) > 3]
+                        
+                        for i, line in enumerate(lines):
+                            p = doc.add_paragraph()
+                            
+                            # İlk satır "1. GENEL HÜKÜMLER" ise başlık olarak işle
+                            if i == 0 and 'GENEL HÜKÜMLER' in line:
+                                # Başlık olarak ekle (madde işareti olmadan)
+                                title_run = p.add_run(line)
+                                title_run.font.name = 'Times New Roman'
+                                title_run.font.size = Pt(11)
+                                title_run.font.bold = True
+                                title_run.font.color.rgb = RGBColor(0, 0, 0)
+                            else:
+                                # Normal madde olarak ekle
                                 # Yuvarlak madde işareti ekle (Bold)
                                 bullet_run = p.add_run('• ')
                                 bullet_run.font.name = 'Times New Roman'
                                 bullet_run.font.size = Pt(11)
                                 bullet_run.font.bold = True
+                                bullet_run.font.color.rgb = RGBColor(0, 0, 0)
                                 
                                 # Metin ekle
                                 text_run = p.add_run(line)
                                 text_run.font.name = 'Times New Roman'
                                 text_run.font.size = Pt(11)
                                 text_run.font.bold = False
-                                
-                                p.paragraph_format.space_after = Pt(6)
-                                p.paragraph_format.space_before = Pt(0)
-                                p.paragraph_format.line_spacing = 1.5
-                                
-            except Exception as e:
-                print(f"Genel hükümler formatlaması hatası: {e}")
-                # Fallback: Basit temizleme
-                clean_text = re.sub(r'<[^>]+>', '', genel_hukumler)
-                clean_text = re.sub(r'\[if\s+!supportLists\][\s\S]*?\[endif\]', '', clean_text)
-                clean_text = re.sub(r'\[if\s+supportLists\][\s\S]*?\[endif\]', '', clean_text)
-                clean_text = re.sub(r'<!--\[if[^>]*>.*?<!\[endif\]-->', '', clean_text, flags=re.DOTALL)
-                clean_text = re.sub(r'<!--.*?-->', '', clean_text, flags=re.DOTALL)
-                clean_text = clean_text.replace('&nbsp;', ' ')
-                clean_text = clean_text.replace('<br>', '\n')
-                clean_text = clean_text.replace('<br/>', '\n')
-                clean_text = clean_text.replace('<br />', '\n')
-                
-                lines = [line.strip() for line in clean_text.split('\n') if line.strip()]
-                if lines:
-                    for line in lines:
-                        if line:
+                                text_run.font.color.rgb = RGBColor(0, 0, 0)
+                            
+                            # Paragraf formatını ayarla
+                            p.paragraph_format.space_after = Pt(12)
+                            p.paragraph_format.space_before = Pt(0)
+                            p.paragraph_format.line_spacing = 1.15
+                            p.paragraph_format.first_line_indent = Inches(0)
+                            p.paragraph_format.left_indent = Inches(0)
+                            p.paragraph_format.right_indent = Inches(0)
+        except Exception as e:
+            print(f"GENEL_HUKUM.docx okuma hatası: {e}")
+            # Fallback: localStorage'dan al
+            localStorage_data = request_data.get('localStorage', {})
+            genel_hukumler = localStorage_data.get('genelHukumlerText', '')
+            
+            # Eğer localStorage'dan gelmediyse, teklif verisinden al
+            if not genel_hukumler:
+                genel_hukumler = teklif.get('genel_hukumler', '')
+            
+            print(f"DEBUG - Genel hükümler verisi: {genel_hukumler[:200]}...")
+            
+            if genel_hukumler and genel_hukumler.strip():
+                try:
+                    from bs4 import BeautifulSoup
+                    import re
+                    
+                    # HTML'i temizle ve parse et
+                    soup = BeautifulSoup(genel_hukumler, 'html.parser')
+                    
+                    # Tüm <p> tag'lerini bul
+                    paragraphs = soup.find_all('p')
+                    
+                    if paragraphs:
+                        # Her paragrafı işle
+                        for i, p_tag in enumerate(paragraphs):
+                            text = p_tag.get_text().strip()
+                            if not text or len(text) < 3:
+                                continue
+                            
+                            # Paragraf oluştur
                             p = doc.add_paragraph()
                             
+                            # İlk paragraf "1. GENEL HÜKÜMLER" ise başlık olarak işle
+                            if i == 0 and 'GENEL HÜKÜMLER' in text:
+                                # Başlık olarak ekle (madde işareti olmadan)
+                                title_run = p.add_run(text)
+                                title_run.font.name = 'Times New Roman'
+                                title_run.font.size = Pt(11)
+                                title_run.font.bold = True
+                                title_run.font.color.rgb = RGBColor(0, 0, 0)
+                            else:
+                                # Normal madde olarak ekle
+                                # Yuvarlak madde işareti ekle (Bold)
+                                bullet_run = p.add_run('• ')
+                                bullet_run.font.name = 'Times New Roman'
+                                bullet_run.font.size = Pt(11)
+                                bullet_run.font.bold = True
+                                bullet_run.font.color.rgb = RGBColor(0, 0, 0)
+                                
+                                # Metin ekle
+                                text_run = p.add_run(text)
+                                text_run.font.name = 'Times New Roman'
+                                text_run.font.size = Pt(11)
+                                text_run.font.bold = False
+                                text_run.font.color.rgb = RGBColor(0, 0, 0)
+                            
+                            # Paragraf formatını ayarla
+                            p.paragraph_format.space_after = Pt(12)
+                            p.paragraph_format.space_before = Pt(0)
+                            p.paragraph_format.line_spacing = 1.15
+                            p.paragraph_format.first_line_indent = Inches(0)
+                            p.paragraph_format.left_indent = Inches(0)
+                            p.paragraph_format.right_indent = Inches(0)
+                    
+                    else:
+                        # <p> tag'i yoksa, düz metni satırlara böl
+                        clean_text = soup.get_text()
+                        lines = [line.strip() for line in clean_text.split('\n') if line.strip() and len(line.strip()) > 3]
+                        
+                        for i, line in enumerate(lines):
+                            p = doc.add_paragraph()
+                            
+                            # İlk satır "1. GENEL HÜKÜMLER" ise başlık olarak işle
+                            if i == 0 and 'GENEL HÜKÜMLER' in line:
+                                # Başlık olarak ekle (madde işareti olmadan)
+                                title_run = p.add_run(line)
+                                title_run.font.name = 'Times New Roman'
+                                title_run.font.size = Pt(11)
+                                title_run.font.bold = True
+                                title_run.font.color.rgb = RGBColor(0, 0, 0)
+                            else:
+                                # Normal madde olarak ekle
+                                # Yuvarlak madde işareti ekle (Bold)
+                                bullet_run = p.add_run('• ')
+                                bullet_run.font.name = 'Times New Roman'
+                                bullet_run.font.size = Pt(11)
+                                bullet_run.font.bold = True
+                                bullet_run.font.color.rgb = RGBColor(0, 0, 0)
+                                
+                                # Metin ekle
+                                text_run = p.add_run(line)
+                                text_run.font.name = 'Times New Roman'
+                                text_run.font.size = Pt(11)
+                                text_run.font.bold = False
+                                text_run.font.color.rgb = RGBColor(0, 0, 0)
+                            
+                            # Paragraf formatını ayarla
+                            p.paragraph_format.space_after = Pt(12)
+                            p.paragraph_format.space_before = Pt(0)
+                            p.paragraph_format.line_spacing = 1.15
+                            p.paragraph_format.first_line_indent = Inches(0)
+                            p.paragraph_format.left_indent = Inches(0)
+                            p.paragraph_format.right_indent = Inches(0)
+                            
+                except Exception as e:
+                    print(f"Genel hükümler formatlaması hatası: {e}")
+                    # Fallback: Basit madde işaretli liste
+                    clean_text = re.sub(r'<[^>]+>', '', genel_hukumler)
+                    lines = [line.strip() for line in clean_text.split('\n') if line.strip() and len(line.strip()) > 3]
+                    
+                    for i, line in enumerate(lines):
+                        p = doc.add_paragraph()
+                        
+                        # İlk satır "1. GENEL HÜKÜMLER" ise başlık olarak işle
+                        if i == 0 and 'GENEL HÜKÜMLER' in line:
+                            # Başlık olarak ekle (madde işareti olmadan)
+                            title_run = p.add_run(line)
+                            title_run.font.name = 'Times New Roman'
+                            title_run.font.size = Pt(11)
+                            title_run.font.bold = True
+                            title_run.font.color.rgb = RGBColor(0, 0, 0)
+                        else:
+                            # Normal madde olarak ekle
                             # Yuvarlak madde işareti ekle (Bold)
                             bullet_run = p.add_run('• ')
                             bullet_run.font.name = 'Times New Roman'
                             bullet_run.font.size = Pt(11)
                             bullet_run.font.bold = True
+                            bullet_run.font.color.rgb = RGBColor(0, 0, 0)
                             
                             # Metin ekle
                             text_run = p.add_run(line)
                             text_run.font.name = 'Times New Roman'
                             text_run.font.size = Pt(11)
                             text_run.font.bold = False
-                            
-                            p.paragraph_format.space_after = Pt(6)
-                            p.paragraph_format.space_before = Pt(0)
-                            p.paragraph_format.line_spacing = 1.5
+                            text_run.font.color.rgb = RGBColor(0, 0, 0)
+                        
+                        # Paragraf formatını ayarla
+                        p.paragraph_format.space_after = Pt(12)
+                        p.paragraph_format.space_before = Pt(0)
+                        p.paragraph_format.line_spacing = 1.15
+                        p.paragraph_format.first_line_indent = Inches(0)
+                        p.paragraph_format.left_indent = Inches(0)
+                        p.paragraph_format.right_indent = Inches(0)
+        
         
         # Geçici dosya oluştur ve kaydet
         temp_file_path = None
@@ -9887,9 +10603,8 @@ def create_pdf_teklif(teklif, firma):
     except Exception as e:
         return jsonify({'success': False, 'message': f'PDF dosyası oluşturma hatası: {str(e)}'})
 
-@app.route('/export_graph_and_data', methods=['POST'])
-def export_graph_and_data():
-    """Grafiği ve veri tablosunu Excel dosyasına dışa aktarır."""
+# @app.route('/export_graph_and_data', methods=['POST']) - KK Eğri sistemi silindi
+# def export_graph_and_data(): - KK Eğri sistemi silindi
     try:
         # Grafiği oluştur ve PNG olarak kaydet
         plt, np, mdates, Rectangle = load_matplotlib()
@@ -9937,8 +10652,8 @@ def export_graph_and_data():
         print(f"Grafik ve veri dışa aktarılırken hata: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
-@app.route('/api/kk_excel_with_graph', methods=['POST'])
-def kk_excel_with_graph():
+# @app.route('/api/kk_excel_with_graph', methods=['POST']) - KK Eğri sistemi silindi
+# def kk_excel_with_graph(): - KK Eğri sistemi silindi
     try:
         data = request.get_json()
         parametre = data.get('parametre')
@@ -9986,8 +10701,8 @@ def kk_excel_with_graph():
         print(f"Excel export with graph error: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
-@app.route('/api/pivot/compare')
-def api_pivot_compare():
+# @app.route('/api/pivot/compare') - Pivot sistemi silindi
+# def api_pivot_compare(): - Pivot sistemi silindi
     """PIVOT karşılaştırma API endpoint'i - yıllara göre baca sayısı, parametre sayısı, fiyat ve personel performansını döndürür."""
     try:
         years = request.args.get('years', '')
@@ -10001,21 +10716,17 @@ def api_pivot_compare():
         # Verileri yükle
         baca_bilgileri = load_baca_bilgileri()
         parametre_olcumleri = load_parametre_olcum()
-        teklifler = load_teklif()
+        # teklifler = load_teklif() - teklif sistemi silindi
         
         result_data = {}
         
         for year in year_list:
-            # O yıl için teklifleri filtrele
-            year_teklifler = []
-            for t in teklifler:
-                tdate = t.get('teklif_tarihi', '')
-                if tdate and tdate[:4] == str(year):
-                    year_teklifler.append(t)
+            # O yıl için teklifleri filtrele - teklif sistemi silindi
+            year_teklifler = []  # teklif sistemi silindi
             
-            # Toplam teklif sayısı ve tutarı
-            toplam_teklif_adedi = len(year_teklifler)
-            toplam_teklif_tutari = sum(float(t.get('netToplam', 0) or 0) for t in year_teklifler)
+            # Toplam teklif sayısı ve tutarı - teklif sistemi silindi
+            toplam_teklif_adedi = 0  # teklif sistemi silindi
+            toplam_teklif_tutari = 0  # teklif sistemi silindi
             
             # Kabul olan teklifleri filtrele
             def _norm(sval: str) -> str:
@@ -10023,33 +10734,30 @@ def api_pivot_compare():
                 tr_map = str.maketrans({'ı':'i','İ':'i','ş':'s','Ş':'s','ç':'c','Ç':'c','ğ':'g','Ğ':'g','ü':'u','Ü':'u','ö':'o','Ö':'o'})
                 return m.translate(tr_map)
             
-            kabul_teklifler = []
-            for t in year_teklifler:
-                status = _norm(t.get('teklif_durumu', ''))
-                if any(k in status for k in ['kabul', 'onay']):
-                    kabul_teklifler.append(t)
+            kabul_teklifler = []  # teklif sistemi silindi
+            # for t in year_teklifler: - teklif sistemi silindi
             
-            kabul_adet = len(kabul_teklifler)
-            kabul_tutari = sum(float(t.get('netToplam', 0) or 0) for t in kabul_teklifler)
+            kabul_adet = 0  # teklif sistemi silindi
+            kabul_tutari = 0  # teklif sistemi silindi
             
-            # Kapsam içi/dışı teklifleri hesapla - TÜM teklifler arasından (sadece kabul olanlar değil)
-            kapsam_ici_teklifler = [t for t in year_teklifler if 'kapsam' in _norm(t.get('teklif_tipi', '')) and ('ici' in _norm(t.get('teklif_tipi', '')) or 'i̇ci̇' in _norm(t.get('teklif_tipi', '')))]
-            kapsam_disi_teklifler = [t for t in year_teklifler if 'kapsam' in _norm(t.get('teklif_tipi', '')) and ('disi' in _norm(t.get('teklif_tipi', '')) or 'dis' in _norm(t.get('teklif_tipi', '')))]
-            is_birligi_teklifler = [t for t in year_teklifler if ('is' in _norm(t.get('teklif_tipi', '')) or 'i̇s' in _norm(t.get('teklif_tipi', ''))) and ('birlik' in _norm(t.get('teklif_tipi', '')) or 'bi̇rli̇k' in _norm(t.get('teklif_tipi', '')) or 'bi̇rli̇gi̇' in _norm(t.get('teklif_tipi', '')))]
+            # Kapsam içi/dışı teklifleri hesapla - teklif sistemi silindi
+            kapsam_ici_teklifler = []  # teklif sistemi silindi
+            kapsam_disi_teklifler = []  # teklif sistemi silindi
+            is_birligi_teklifler = []  # teklif sistemi silindi
             
-            # Kapsam içi/dışı tutarları - sadece KABUL olanların tutarını hesapla
-            kapsam_ici_kabul_teklifler = [t for t in kapsam_ici_teklifler if any(k in _norm(t.get('teklif_durumu', '')) for k in ['kabul', 'onay'])]
-            kapsam_disi_kabul_teklifler = [t for t in kapsam_disi_teklifler if any(k in _norm(t.get('teklif_durumu', '')) for k in ['kabul', 'onay'])]
-            is_birligi_kabul_teklifler = [t for t in is_birligi_teklifler if any(k in _norm(t.get('teklif_durumu', '')) for k in ['kabul', 'onay'])]
+            # Kapsam içi/dışı tutarları - teklif sistemi silindi
+            kapsam_ici_kabul_teklifler = []  # teklif sistemi silindi
+            kapsam_disi_kabul_teklifler = []  # teklif sistemi silindi
+            is_birligi_kabul_teklifler = []  # teklif sistemi silindi
             
-            # Adet sayıları - sadece KABUL olanların sayısı
-            kapsam_ici_adet = len(kapsam_ici_kabul_teklifler)
-            kapsam_disi_adet = len(kapsam_disi_kabul_teklifler)
-            is_birligi_adet = len(is_birligi_kabul_teklifler)
+            # Adet sayıları - teklif sistemi silindi
+            kapsam_ici_adet = 0  # teklif sistemi silindi
+            kapsam_disi_adet = 0  # teklif sistemi silindi
+            is_birligi_adet = 0  # teklif sistemi silindi
             
-            kapsam_ici_tutar = sum(float(t.get('netToplam', 0) or 0) for t in kapsam_ici_kabul_teklifler)
-            kapsam_disi_tutar = sum(float(t.get('netToplam', 0) or 0) for t in kapsam_disi_kabul_teklifler)
-            is_birligi_tutar = sum(float(t.get('netToplam', 0) or 0) for t in is_birligi_kabul_teklifler)
+            kapsam_ici_tutar = 0  # teklif sistemi silindi
+            kapsam_disi_tutar = 0  # teklif sistemi silindi
+            is_birligi_tutar = 0  # teklif sistemi silindi
             
             # Baca sayısını hesapla - Firma ölçümlerindeki BACA SAY değerlerinin toplamı
             firma_olcumler = load_firma_olcum()
@@ -10118,7 +10826,7 @@ def api_pivot_compare():
             # Asgari fiyatları yıla göre filtrele
             for param_adi, adet in parametre_sayilari.items():
                 if adet > 0:  # Sadece adedi olan parametreler için hesapla
-                    # Parametre ismini eşleştir (zaten eşleştirilmiş)
+                    # Parametre ismini eşleştir (zaten eşleştirilmiş halde geliyor)
                     eslesen_param = param_adi  # Artık zaten eşleştirilmiş halde geliyor
                     
                     # Asgari fiyat tablosundan o yılın fiyatını bul
@@ -10238,65 +10946,8 @@ def api_pivot_compare():
         import traceback
         print(f"Hata detayı: {traceback.format_exc()}")
         return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/api/pivot/export-xlsx')
-def api_pivot_export_xlsx():
-    """PIVOT verilerini XLSX formatında export et - sayılar sayı formatında, tarihler tarih formatında"""
-    try:
-        years = request.args.get('years', '')
-        if not years:
-            return jsonify({'success': False, 'error': 'Yıl parametresi gerekli'}), 400
-        
-        year_list = [int(y.strip()) for y in years.split(',') if y.strip()]
-        if not year_list:
-            return jsonify({'success': False, 'error': 'Geçerli yıl listesi gerekli'}), 400
-        
-        # Pivot verilerini al (mevcut API'yi kullan)
-        import requests
-        try:
-            response = requests.get(f'http://localhost:{os.environ.get("PORT", 5001)}/api/pivot/compare?years={",".join(map(str, year_list))}')
-            if response.status_code != 200:
-                return jsonify({'success': False, 'error': 'Pivot verileri alınamadı'}), 500
-            data = response.json()
-            if not data.get('success'):
-                return jsonify({'success': False, 'error': 'Pivot verileri başarısız'}), 500
-        except Exception as e:
-            # Direct API call başarısız olursa, verileri doğrudan hesapla
-            baca_bilgileri = load_baca_bilgileri()
-            parametre_olcumleri = load_parametre_olcum()
-            teklifler = load_teklif()
-            firma_olcumler = load_firma_olcum()
-            asgari_fiyatlar = load_asgari_fiyatlar()
-            
-            # Basit veri yapısı oluştur
-            data = {'success': True, 'data': {}}
-            for year in year_list:
-                data['data'][str(year)] = {
-                    'summary': {
-                        'toplam_teklif_adedi': 0,
-                        'kabul_adet': 0,
-                        'kapsam_ici_adet': 0,
-                        'kapsam_disi_adet': 0,
-                        'is_birligi_adet': 0,
-                        'toplam_teklif_tutari': 0,
-                        'kabul_tutari': 0,
-                        'kapsam_ici_tutar': 0,
-                        'kapsam_disi_tutar': 0,
-                        'is_birligi_tutar': 0,
-                        'toplam_baca_adedi': 0,
-                        'toplam_parametre_adedi': 0,
-                        'parametre_sayilari': {},
-                        'personel_performans': {},
-                        'personel_tutarlar': {},
-                        'personel_parametre_performans': {}
-                    }
-                }
-        
-        # XLSX dosyası oluştur
-        from openpyxl import Workbook
-        from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
-        from openpyxl.utils import get_column_letter
-        from datetime import datetime
+# @app.route('/api/pivot/export-xlsx') - Pivot sistemi silindi
+# def api_pivot_export_xlsx(): - Pivot sistemi silindi
         
         wb = Workbook()
         ws = wb.active
@@ -10508,8 +11159,8 @@ def api_pivot_export_xlsx():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 # Admin Backup/Restore endpoints
-@app.route('/api/admin/backup', methods=['POST'])
-def api_admin_backup():
+# @app.route('/api/admin/backup', methods=['POST']) - Admin sistemi silindi
+# def api_admin_backup(): - Admin sistemi silindi
     """Admin için veri yedekleme"""
     if not session.get('logged_in'):
         return jsonify({'success': False, 'error': 'Oturum açmanız gerekiyor'}), 401
@@ -10530,7 +11181,7 @@ def api_admin_backup():
         # Yedeklenecek dosyalar
         data_files = [
             'firma_kayit.json',
-            'teklif.json', 
+            # 'teklif.json' silindi
             'firma_olcum.json',
             'saha_olc.json',
             'parameters.json',
@@ -10540,7 +11191,7 @@ def api_admin_backup():
             'asgari_fiyatlar.json',
             'forms.json',
             'users.json',
-            'used_teklif_numbers.json',
+            # 'used_teklif_numbers.json' silindi
             'par_saha_header_groups.json'
         ]
         
@@ -10563,8 +11214,703 @@ def api_admin_backup():
     except Exception as e:
         return jsonify({'success': False, 'error': f'Yedekleme hatası: {str(e)}'}), 500
 
-@app.route('/api/admin/restore', methods=['POST'])
-def api_admin_restore():
+@app.route('/api/save_asama3_data', methods=['POST'])
+def save_asama3_data():
+    """3. Aşama verilerini kaydeder (firma-olcum_kodu-baca kombinasyonu için en son kayıt)."""
+    try:
+        data = request.get_json()
+        
+        # 3. Aşama verilerini dosyaya kaydet - trim ile normalize et
+        # Tarih formatını gg/aa/yy ss:dd formatına çevir
+        def format_tarih(tarih_str):
+            if not tarih_str:
+                return tarih_str
+            try:
+                # gg.aa.yyyy ss:dd formatını gg/aa/yy ss:dd formatına çevir
+                if '.' in tarih_str and len(tarih_str.split('.')[0]) == 2:
+                    return tarih_str.replace('.', '/')[:8] + tarih_str[8:]
+                # gg/aa/yyyy ss:dd formatını gg/aa/yy ss:dd formatına çevir
+                elif '/' in tarih_str:
+                    parts = tarih_str.split('/')
+                    if len(parts) >= 3:
+                        year_part = parts[2].split(' ')[0]
+                        if len(year_part) == 4:  # gg/aa/yyyy formatı
+                            time_part = tarih_str[tarih_str.find(' '):] if ' ' in tarih_str else ''
+                            return f"{parts[0]}/{parts[1]}/{year_part[:2]}{time_part}"
+                    return tarih_str
+                # yyyy-mm-dd formatını gg/aa/yy formatına çevir
+                elif '-' in tarih_str and len(tarih_str.split('-')[0]) == 4:
+                    dt = datetime.strptime(tarih_str, '%Y-%m-%d %H:%M:%S')
+                    return dt.strftime('%d/%m/%y %H:%M')
+                else:
+                    return tarih_str
+            except:
+                return tarih_str
+        
+        # Parametreler içindeki tarihleri formatla
+        parametreler = data.get('parametreler', [])
+        for param in parametreler:
+            if 'hesaplamalar' in param:
+                for hesaplama in param['hesaplamalar']:
+                    if 'degerler' in hesaplama:
+                        degerler = hesaplama['degerler']
+                        if 'deger_2' in degerler:
+                            degerler['deger_2'] = format_tarih(degerler['deger_2'])
+        
+        # Kilit bilgisini al ve normalize et (0/1)
+        locked_raw = data.get('locked', 0)
+        locked = 0
+        if isinstance(locked_raw, bool):
+            locked = 1 if locked_raw else 0
+        else:
+            try:
+                locked = 1 if str(locked_raw).strip().lower() in ('1', 'true', 'evet', 'yes', 'on') else 0
+            except Exception:
+                locked = 0
+
+        asama3_data = {
+            'firma': data.get('firma', '').strip(),
+            'olcum_kodu': data.get('olcumKodu', '').strip(),
+            'baca': data.get('baca', '').strip(),
+            'personel': data.get('personel', '').strip(),
+            'asama': 3,
+            'parametreler': parametreler,
+            'kayit_tarihi': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'locked': locked,
+        }
+        
+        # Mevcut verileri oku - JSONDecodeError yakala
+        try:
+            with open('asama3_verileri.json', 'r', encoding='utf-8') as f:
+                content = f.read().strip()
+                if not content:
+                    mevcut_veriler = []
+                else:
+                    mevcut_veriler = json.loads(content)
+        except (FileNotFoundError, json.JSONDecodeError):
+            mevcut_veriler = []
+        
+        # Aynı firma-olcum_kodu-baca kombinasyonu için eski kayıtları sil
+        mevcut_veriler = [
+            record for record in mevcut_veriler
+            if not (record.get('firma', '').strip() == asama3_data['firma'] and
+                    record.get('olcum_kodu', '').strip() == asama3_data['olcum_kodu'] and
+                    record.get('baca', '').strip() == asama3_data['baca'] and
+                    record.get('asama') == 3)
+        ]
+        
+        # Yeni kayıt ekle
+        mevcut_veriler.append(asama3_data)
+        
+        # Dosyaya kaydet
+        with open('asama3_verileri.json', 'w', encoding='utf-8') as f:
+            json.dump(mevcut_veriler, f, ensure_ascii=False, indent=2)
+        
+        return jsonify({
+            'success': True,
+            'message': f'{asama3_data["firma"]} - Baca {asama3_data["baca"]} - 3. Aşama verisi kaydedildi!'
+        })
+        
+    except Exception as e:
+        print(f"3. Aşama verisi kaydedilirken hata: {e}")
+        return jsonify({'success': False, 'message': f'Kaydetme hatası: {str(e)}'}), 500
+
+@app.route('/api/get_asama3_data')
+def get_asama3_data():
+    """Belirtilen firma-olcum_kodu-baca için 3. Aşama verisini getirir (en son kayıt)."""
+    try:
+        baca_no = request.args.get('baca_no', '').strip()
+        firma = request.args.get('firma', '').strip()
+        olcum_kodu = request.args.get('olcum_kodu', '').strip()
+        
+        if not baca_no:
+            return jsonify({'success': False, 'message': 'Baca numarası gerekli'}), 400
+        
+        # Dosyayı oku - JSONDecodeError yakala
+        try:
+            with open('asama3_verileri.json', 'r', encoding='utf-8') as f:
+                content = f.read().strip()
+                if not content:
+                    veriler = []
+                else:
+                    veriler = json.loads(content)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return jsonify({'success': False, 'message': '3. Aşama verisi bulunamadı veya bozuk'}), 404
+        
+        # Belirtilen firma-olcum_kodu-baca kombinasyonu için veriyi bul - en son kayıt
+        matching_records = []
+        for veri in veriler:
+            if (veri.get('asama') == 3 and
+                str(veri.get('baca', '')).strip() == baca_no and
+                (not firma or str(veri.get('firma', '')).strip() == firma) and
+                (not olcum_kodu or str(veri.get('olcum_kodu', '')).strip() == olcum_kodu)):
+                matching_records.append(veri)
+        
+        if matching_records:
+            # En son kaydı döndür (kayit_tarihi'ne göre sırala)
+            latest_record = max(matching_records, key=lambda r: r.get('kayit_tarihi', ''))
+            return jsonify({'success': True, 'data': latest_record})
+        
+        return jsonify({'success': False, 'message': '3. Aşama verisi bulunamadı'}), 404
+        
+    except Exception as e:
+        print(f"3. Aşama verisi getirilirken hata: {e}")
+        return jsonify({'success': False, 'message': f'Veri getirme hatası: {str(e)}'}), 500
+
+@app.route('/api/export_eurometric', methods=['GET'])
+def export_eurometric():
+    """3. Aşama verilerini eurometric.txt formatına dönüştürür.
+
+    Varsayılan olarak dosya indirme başlatır. Eğer `inline=1` (veya true) parametresi
+    gönderilirse, içeriği doğrudan text/plain olarak döner (önizleme için)."""
+    try:
+        firma = request.args.get('firma', '').strip()
+        olcum_kodu = request.args.get('olcum_kodu', '').strip()
+        baca = request.args.get('baca', '').strip()
+        olcum_no = request.args.get('olcum_no', '1')  # Varsayılan 1. ölçüm
+        param_index = request.args.get('param_index', '0')  # Varsayılan ilk parametre
+        inline = request.args.get('inline', '').strip().lower() in ('1', 'true', 'yes')
+        
+        if not all([firma, olcum_kodu, baca]):
+            return jsonify({'success': False, 'message': 'Firma, ölçüm kodu ve baca bilgisi gerekli'}), 400
+        
+        # 3. Aşama verilerini yükle
+        try:
+            with open('asama3_verileri.json', 'r', encoding='utf-8') as f:
+                content = f.read().strip()
+                if not content:
+                    asama3_veriler = []
+                else:
+                    asama3_veriler = json.loads(content)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return jsonify({'success': False, 'message': '3. Aşama verisi bulunamadı'}), 404
+        
+        # İlgili kaydı bul
+        asama3_data = None
+        for veri in asama3_veriler:
+            if (veri.get('asama') == 3 and
+                str(veri.get('firma', '')).strip() == firma and
+                str(veri.get('olcum_kodu', '')).strip() == olcum_kodu and
+                str(veri.get('baca', '')).strip() == baca):
+                asama3_data = veri
+                break
+        
+        if not asama3_data:
+            return jsonify({'success': False, 'message': '3. Aşama verisi bulunamadı'}), 404
+        
+        # 1. ve 2. Aşama verilerini de yükle
+        asama1_data = None
+        asama2_data = None
+        
+        try:
+            with open('asama_verileri.json', 'r', encoding='utf-8') as f:
+                content = f.read().strip()
+                if content:
+                    asama1_veriler = json.loads(content)
+                    for veri in asama1_veriler:
+                        if (veri.get('asama') == 1 and
+                            str(veri.get('firma', '')).strip() == firma and
+                            str(veri.get('olcum_kodu', '')).strip() == olcum_kodu and
+                            str(veri.get('baca', '')).strip() == baca):
+                            asama1_data = veri
+                            break
+        except:
+            pass
+        
+        try:
+            with open('asama2_verileri.json', 'r', encoding='utf-8') as f:
+                content = f.read().strip()
+                if content:
+                    asama2_veriler = json.loads(content)
+                    for veri in asama2_veriler:
+                        if (veri.get('asama') == 2 and
+                            str(veri.get('firma', '')).strip() == firma and
+                            str(veri.get('olcum_kodu', '')).strip() == olcum_kodu and
+                            str(veri.get('baca', '')).strip() == baca):
+                            asama2_data = veri
+                            break
+        except:
+            pass
+        
+        # Eurometric şablonunu oku
+        try:
+            with open('formlar/eurometric.txt', 'r', encoding='utf-8') as f:
+                template = f.read()
+        except FileNotFoundError:
+            return jsonify({'success': False, 'message': 'Eurometric şablonu bulunamadı'}), 404
+        
+        # Şablonu doldur
+        olcum_no_int = int(olcum_no) if olcum_no.isdigit() else 1
+        param_idx = int(param_index) if param_index.isdigit() else 0
+        output = generate_eurometric_report(template, asama1_data, asama2_data, asama3_data, olcum_no_int, param_idx)
+        
+        # Eğer inline isteniyorsa, içeriği doğrudan döndür (önizleme)
+        if inline:
+            return output, 200, {'Content-Type': 'text/plain; charset=utf-8'}
+
+        # Dosyayı oluştur ve gönder (indirme)
+        output_bytes = BytesIO()
+        output_bytes.write(output.encode('utf-8'))
+        output_bytes.seek(0)
+
+        # Kullanıcı isteğine göre dosya adı:
+        # firma adı (ilk kelime)_baca adı(ölçüm kodu)_parametre_olcNo
+        # Örn: wwww_proses(5)_Toz-1olc
+
+        # Firma ilk kelime
+        firma_first = (firma.split()[0] if firma else '').strip() or 'Firma'
+
+        # Baca adı (gelen baca parametresi)
+        baca_adi = (baca or '').strip() or 'Baca'
+
+        # Parametre adı: öncelik sırası 2. aşama, yoksa 3. aşama (param_index'e göre)
+        parametre_adi = ''
+        try:
+            if asama2_data and asama2_data.get('parametreler'):
+                params = asama2_data['parametreler']
+                if param_idx < len(params):
+                    p = params[param_idx]
+                    parametre_adi = str(p.get('parametre', '')).strip()
+            if (not parametre_adi) and asama3_data and asama3_data.get('parametreler'):
+                params3 = asama3_data['parametreler']
+                if param_idx < len(params3):
+                    p3 = params3[param_idx]
+                    parametre_adi = str(p3.get('parametre', '') or p3.get('parametre_adi', '')).strip()
+        except Exception:
+            pass
+
+        if not parametre_adi:
+            parametre_adi = 'Parametre'
+
+        # Parametre adını sadeleştir (ilk satır / ilk kelime, boşlukları tireye çevir)
+        parametre_clean = str(parametre_adi).split('\n')[0].split('|')[0].strip()
+        if ' ' in parametre_clean:
+            parametre_clean = parametre_clean.split(' ')[0]
+        parametre_clean = parametre_clean.replace(' ', '_')
+
+        # Ölçüm numarası etiketi
+        try:
+            olc_no_int = int(olcum_no_int)
+        except Exception:
+            olc_no_int = 1
+        olc_suffix = f"{olc_no_int}olc"
+
+        filename = f"{firma_first}_{baca_adi}({olcum_kodu})_{parametre_clean}-{olc_suffix}.txt"
+        
+        return send_file(
+            output_bytes,
+            mimetype='text/plain',
+            as_attachment=True,
+            download_name=filename
+        )
+        
+    except Exception as e:
+        print(f"Eurometric export hatası: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'Export hatası: {str(e)}'}), 500
+
+def format_date_for_eurometric(date_str):
+    """Tarihi gg/aa/yy ss:dd formatına çevirir."""
+    if not date_str:
+        return ''
+    
+    from datetime import datetime
+    
+    try:
+        # Eğer zaten gg/aa/yy ss:dd formatındaysa
+        if '/' in date_str and ':' in date_str:
+            parts = date_str.split()
+            if len(parts) == 2:
+                date_part = parts[0]
+                time_part = parts[1]
+                date_parts = date_part.split('/')
+                if len(date_parts) == 3:
+                    day = date_parts[0].zfill(2)
+                    month = date_parts[1].zfill(2)
+                    year = date_parts[2]
+                    # Yıl 4 haneli ise 2 haneye düşür
+                    if len(year) == 4:
+                        year = year[-2:]
+                    return f"{day}/{month}/{year} {time_part}"
+            return date_str
+        
+        # ISO format veya diğer formatlar için
+        if 'T' in date_str:
+            dt = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+        else:
+            # Çeşitli formatları dene
+            for fmt in ['%Y-%m-%d %H:%M:%S', '%d/%m/%Y %H:%M', '%d.%m.%Y %H:%M', '%d-%m-%Y %H:%M']:
+                try:
+                    dt = datetime.strptime(date_str, fmt)
+                    break
+                except:
+                    continue
+            else:
+                return date_str
+        
+        day = dt.strftime('%d')
+        month = dt.strftime('%m')
+        year = dt.strftime('%y')  # 2 haneli yıl
+        hour = dt.strftime('%H')
+        minute = dt.strftime('%M')
+        return f"{day}/{month}/{year} {hour}:{minute}"
+    except:
+        return date_str
+
+def generate_eurometric_report(template, asama1_data, asama2_data, asama3_data, olcum_no=1, param_index=0):
+    """Eurometric şablonunu verilerle doldurur."""
+    import re
+    # Yardımcı formatlayıcı: genişlik ve ondalık sayısına göre sağa hizalı metin üretir
+    def fmt(value, width=None, precision=None):
+        try:
+            if value is None or str(value).strip() == '':
+                s = ''
+            else:
+                v = str(value).replace(',', '.')
+                num = float(v)
+                if precision is not None:
+                    s = f"{num:.{precision}f}"
+                else:
+                    s = str(num)
+        except Exception:
+            s = str(value) if value is not None else ''
+        if width is not None and width > 0:
+            s = s.rjust(width)[:width]
+        return s
+    
+    # Belirtilen parametreyi al (param_index'e göre)
+    if not asama3_data or not asama3_data.get('parametreler'):
+        return template
+    
+    parametreler = asama3_data['parametreler']
+    if param_index >= len(parametreler):
+        param_index = 0  # Geçersiz index ise ilk parametreyi kullan
+    
+    first_parametre = parametreler[param_index]
+    hesaplamalar = first_parametre.get('hesaplamalar', [])
+    
+    # Ortalama satırlarını filtrele
+    all_travers_rows = [h for h in hesaplamalar if not h.get('ortalama', False)]
+    
+    # Ölçüm için travers sayısını belirle (2. aşamadan veya ilk 6 travers)
+    travers_count = 6
+    if asama2_data and asama2_data.get('parametreler'):
+        params_a2 = asama2_data['parametreler']
+        if param_index < len(params_a2):
+            param_a2 = params_a2[param_index]
+            travers_count = int(param_a2.get('traversSayisi', 6)) if param_a2.get('traversSayisi') else 6
+    
+    # Belirtilen ölçüm numarasına göre travers'leri al
+    # 1. ölçüm: 0-5, 2. ölçüm: 6-11, 3. ölçüm: 12-17, vs.
+    start_idx = (olcum_no - 1) * travers_count
+    end_idx = start_idx + travers_count
+    travers_rows = all_travers_rows[start_idx:end_idx]
+    
+    if not travers_rows:
+        return template
+    
+    # Genel bilgileri hazırla
+    first_row = travers_rows[0].get('degerler', {})
+    
+    # Cihaz seri
+    cihaz_seri = first_row.get('deger_19', '') or (asama1_data.get('cihazSeri', '') if asama1_data else '')
+    
+    # Başlangıç: öncelik 2. aşama verisi (ilgili parametre + ölçüm no), yoksa 3. aşama ilk travers zamanı
+    baslangic_raw = first_row.get('deger_2', '')
+    if asama2_data and asama2_data.get('parametreler'):
+        try:
+            params_a2 = asama2_data['parametreler']
+            param_a2 = params_a2[param_index] if param_index < len(params_a2) else params_a2[0]
+            if olcum_no == 1 and param_a2.get('baslangic'):
+                baslangic_raw = param_a2.get('baslangic')
+            elif olcum_no == 2 and param_a2.get('olcum2Baslangic'):
+                baslangic_raw = param_a2.get('olcum2Baslangic')
+            elif olcum_no == 3 and param_a2.get('olcum3Baslangic'):
+                baslangic_raw = param_a2.get('olcum3Baslangic')
+        except Exception:
+            # Herhangi bir hata olursa 3. aşama travers zamanına geri düş
+            pass
+    baslangic = format_date_for_eurometric(baslangic_raw)
+    
+    # Ayarlanan süre (2. aşamadan veya 3. aşamadan) - sadece dakika cinsinden (dd)
+    ayarlanan_sure_dk = ''
+    if asama2_data and asama2_data.get('parametreler'):
+        try:
+            params_a2 = asama2_data['parametreler']
+            first_param = params_a2[param_index] if param_index < len(params_a2) else params_a2[0]
+            ayarlanan_sure_raw = first_param.get('ayarlananSure') or first_param.get('sure', '')
+            if ayarlanan_sure_raw:
+                # Saniyeyi dakikaya çevir (720 sn = 12 dakika)
+                try:
+                    sure_value = float(str(ayarlanan_sure_raw).replace(',', '.'))
+                    if sure_value >= 60:
+                        # Saniye cinsinden (720 sn = 12 dakika)
+                        minutes = int(sure_value // 60)
+                        ayarlanan_sure_dk = str(minutes)
+                    else:
+                        # Zaten dakika cinsinden
+                        ayarlanan_sure_dk = str(int(sure_value))
+                except:
+                    ayarlanan_sure_dk = str(ayarlanan_sure_raw)
+        except Exception:
+            pass
+
+    if not ayarlanan_sure_dk and travers_rows:
+        try:
+            last_sure_raw = (travers_rows[-1].get('degerler', {}).get('deger_5', '') or '')[:5]
+            if last_sure_raw and ':' in last_sure_raw:
+                mm_part = last_sure_raw.split(':')[0].strip()
+                if mm_part:
+                    ayarlanan_sure_dk = str(int(mm_part))
+        except Exception:
+            pass
+    
+    # Baca No - önce 1. aşamadan bacaNo değerini al, yoksa 1. aşamadan baca adını al, yoksa 2. aşamadan baca adını al
+    baca_no = ''
+    if asama1_data:
+        # Önce bacaNo değerini al (1. aşamadan)
+        baca_no = asama1_data.get('bacaNo', '') or asama1_data.get('baca', '')
+    elif asama2_data and asama2_data.get('baca'):
+        # 1. aşama yoksa 2. aşamadan baca adını al
+        baca_no = asama2_data.get('baca', '')
+
+    # "3.0" gibi değerleri raporda "3" olarak göstermek için sadeleştir
+    if baca_no is not None and str(baca_no).strip() != '':
+        s = str(baca_no).strip()
+        try:
+            v = float(s.replace(',', '.'))
+            if v.is_integer():
+                baca_no = str(int(v))
+            else:
+                baca_no = s
+        except Exception:
+            baca_no = s
+    else:
+        baca_no = ''
+    
+    # Travers sayısı
+    travers_sayisi = len(travers_rows)
+    
+    # Nozzle çapı (ilk travers'ten)
+    nozzle_capi_mm = first_row.get('deger_4', '')
+    
+    # Atmosfer basıncı (1. aşamadan veya 3. aşamadan)
+    atmosfer_kpa = first_row.get('deger_18', '') or (asama1_data.get('atmosferBasinci', '') if asama1_data else '')
+    # kPa -> mmHg dönüşümü (1 kPa ≈ 7.50062 mmHg)
+    atmosfer_mmhg = ''
+    try:
+        if str(atmosfer_kpa).strip() != '':
+            kpa_val = float(str(atmosfer_kpa).replace(',', '.'))
+            mmhg_val = kpa_val * 7.50062
+            atmosfer_mmhg = f"{mmhg_val:.2f}"
+    except Exception:
+        atmosfer_mmhg = ''
+    
+    # Pitot katsayı
+    pitot_k = first_row.get('deger_22', '0.84')
+    
+    # Nem
+    nem = first_row.get('deger_23', '') or (asama1_data.get('nem', '') if asama1_data else '')
+    
+    # Şablonu doldur - genel bilgiler
+    template = template.replace('{cihaz_seri|12}', (cihaz_seri or '')[:12])
+    template = template.replace('{baslangic|16}', (baslangic or '')[:16])
+    # Ayarlanan süre ve travers sayısı tam sayı olarak (örn: 32 dk., 8)
+    template = template.replace('{ayarlanan_sure_dk|3}', fmt(ayarlanan_sure_dk, 3, 0))
+    template = template.replace('{baca_no|3}', fmt(baca_no, 3, 0))
+    template = template.replace('{travers_sayisi|3}', fmt(travers_sayisi, 3, 0))
+    # Nozzle çapı: önce 3. aşamadan, yoksa 2. aşamadaki nozzleCapi'den al
+    try:
+        if (nozzle_capi_mm is None or str(nozzle_capi_mm).strip() == '') and asama2_data and asama2_data.get('parametreler'):
+            params_a2_nz = asama2_data['parametreler']
+            p2_nz = params_a2_nz[param_index] if param_index < len(params_a2_nz) else params_a2_nz[0]
+            nozzle_capi_mm = p2_nz.get('nozzleCapi', '')
+    except Exception:
+        pass
+    template = template.replace('{nozzle_capi_mm|3,1}', fmt(nozzle_capi_mm, 3, 1))
+    template = template.replace('{atmosfer_kpa|6,2}', fmt(atmosfer_kpa, 6, 2))
+    template = template.replace('{atmosfer_mmhg|6,2}', fmt(atmosfer_mmhg, 6, 2))
+    template = template.replace('{pitot_k|5,2}', fmt(pitot_k, 5, 2))
+    template = template.replace('{nem|5,2}', fmt(nem, 5, 2))
+    
+    # Travers verilerini oluştur
+    travers_section = ''
+    total_travers = len(travers_rows)
+    for idx, row in enumerate(travers_rows, 1):
+        degerler = row.get('degerler', {})
+        
+        t_no = str(idx)
+        t_sure_mmss = (degerler.get('deger_5', '00:00') or '00:00')[:5]
+        t_ort_baca_hizi_ms = degerler.get('deger_7', '')
+        t_sayac_hacmi_l = degerler.get('deger_17', '') or degerler.get('deger_12', '')
+        t_baca_sicak_c = degerler.get('deger_8', '')
+        # Sayaç gaz sicaklığı: 3. aşama tablosunda 16. sütun (deger_16)
+        t_sayac_gaz_c = degerler.get('deger_16', '')
+        t_baca_mutlak_kpa = degerler.get('deger_9', '')
+        # kPa -> mmHg
+        t_baca_mutlak_mmhg = ''
+        try:
+            if str(t_baca_mutlak_kpa).strip() != '':
+                _k = float(str(t_baca_mutlak_kpa).replace(',', '.'))
+                t_baca_mutlak_mmhg = f"{_k * 7.50062:.2f}"
+        except Exception:
+            t_baca_mutlak_mmhg = ''
+        t_pitot_dp_pa = degerler.get('deger_20', '')
+        # Pa -> mmHg
+        t_pitot_dp_mmhg = ''
+        try:
+            if str(t_pitot_dp_pa).strip() != '':
+                _p = float(str(t_pitot_dp_pa).replace(',', '.'))
+                t_pitot_dp_mmhg = f"{_p * 0.00750062:.4f}"
+        except Exception:
+            t_pitot_dp_mmhg = ''
+        t_izok_verim = degerler.get('deger_6', '')
+
+        # Son travers için altına çizgi koyma, diğerlerinde koy
+        is_last = (idx == total_travers)
+        travers_block = f"""BACA NO       : {fmt(baca_no, 3, 0)}
+TRAVERS NO    : {fmt(t_no, 3, 0)}
+Sure          : {t_sure_mmss[:5]}
+Ort.baca hizi :{fmt(t_ort_baca_hizi_ms, 6, 1)} m/s
+Sayac hacmi   :{fmt(t_sayac_hacmi_l, 7, 1)} l
+Baca sicakligi: {fmt(t_baca_sicak_c, 6, 1)} C
+Sayac gaz sic.: {fmt(t_sayac_gaz_c, 6, 1)} C
+Baca mutlk bas:{fmt(t_baca_mutlak_kpa, 7, 2)} kPa
+Baca mutlk bas:{fmt(t_baca_mutlak_mmhg, 7, 2)} mmHg
+Pitot dP      :{fmt(t_pitot_dp_pa, 7, 2)} Pa
+Pitot dP      :{fmt(t_pitot_dp_mmhg, 7, 4)} mmHg
+izokin.verimi : {fmt(t_izok_verim, 5, 2)}
+"""
+        if not is_last:
+            # Ara traversler: bir ayırıcı çizgi ve ardından bir boş satır
+            travers_block += " --------------------------- \n\n"
+        travers_section += travers_block
+    
+    # Travers bölümünü değiştir
+    template = re.sub(
+        r'\[\[TRAVERS_START\]\].*?\[\[TRAVERS_END\]\]',
+        travers_section,
+        template,
+        flags=re.DOTALL
+    )
+    
+    # Özet rapor bölümünü doldur (ortalama değerler)
+    avg_rows = [h for h in hesaplamalar if h.get('ortalama', False)]
+    if avg_rows:
+        # Her ölçüm (1., 2., 3. ölçüm vb.) için ayrı ORTALAMA satırı varsa,
+        # istenen ölçüme karşılık gelen ortalama satırını kullan.
+        try:
+            avg_index = max(0, min(len(avg_rows) - 1, olcum_no - 1))
+        except Exception:
+            avg_index = 0
+
+        avg_row = avg_rows[avg_index].get('degerler', {})
+
+        o_baslangic = baslangic
+
+        # Bitiş: Öncelik 2. aşamadaki ilgili ölçüm bitiş zamanı (olcum1Bitis/olcum2Bitis/olcum3Bitis)
+        o_bitis = ''
+        o_bitis_raw = ''
+        if asama2_data and asama2_data.get('parametreler'):
+            try:
+                params_a2_bitis = asama2_data['parametreler']
+                param_a2_bitis = params_a2_bitis[param_index] if param_index < len(params_a2_bitis) else params_a2_bitis[0]
+                bitis_key = f"olcum{olcum_no}_Bitis"
+                # Eski kayıtlarda alt çizgisiz olabilir
+                alt_keys = [bitis_key, bitis_key.replace('_', ''), f"olcum{olcum_no}Bitis"]
+                for k in alt_keys:
+                    if k in param_a2_bitis and param_a2_bitis.get(k):
+                        o_bitis_raw = param_a2_bitis.get(k)
+                        break
+            except Exception:
+                o_bitis_raw = ''
+
+        # Eğer 2. aşamadan bitiş alınamadıysa, son travers'in başlangıcını kullan (eski davranış)
+        if not o_bitis_raw and travers_rows:
+            o_bitis_raw = travers_rows[-1].get('degerler', {}).get('deger_2', '')
+
+        o_bitis = format_date_for_eurometric(o_bitis_raw) if o_bitis_raw else ''
+
+        # Örnekleme süresi: son travers'in süresi (hh:mm)
+        last_travers_sure = travers_rows[-1].get('degerler', {}).get('deger_5', '00:00')[:5] if travers_rows else ''
+        o_ornekleme_sure_hhmm = last_travers_sure
+
+        # Ortalama baca hızı (7. sütun) - ölçüme özel ortalama
+        o_ort_baca_hizi_ms = avg_row.get('deger_7', '')
+
+        # Ortalama vakum debisi: 3. aşama ortalama satırındaki 16. ve 15. sütunlar
+        # 15. sütun: Sayaç L/D, 16. sütun: Sayaç NL/D
+        o_ort_vakum_debi_l_d = avg_row.get('deger_15', '')
+        o_ort_vakum_debi_nl_d = avg_row.get('deger_16', '')
+
+        o_kurugaz_nl = avg_row.get('deger_11', '')
+        o_sayac_hacmi_l = avg_row.get('deger_12', '')
+        o_baca_sicak_c = avg_row.get('deger_8', '')
+        o_sayac_gaz_c = avg_row.get('deger_16', '')  # Sayaç gaz için 16. sütun değerini de kullan
+        o_ref_sic_c = ''  # Referans sıcaklık
+
+        # Baca mutlak basıncı (kPa) ve mmHg dönüşümü
+        o_baca_mutlak_kpa = avg_row.get('deger_9', '')
+        o_baca_mutlak_mmhg = ''
+        try:
+            if str(o_baca_mutlak_kpa).strip() != '':
+                _k = float(str(o_baca_mutlak_kpa).replace(',', '.'))
+                o_baca_mutlak_mmhg = f"{_k * 7.50062:.2f}"
+        except Exception:
+            o_baca_mutlak_mmhg = ''
+
+        # Sayaç basıncı: 1. ölçüm ORTALAMA 18. sütun (Atmosfer basnc)
+        o_sayac_basinci_kpa = avg_row.get('deger_18', '')
+        o_sayac_basinci_mmhg = ''
+        try:
+            if str(o_sayac_basinci_kpa).strip() != '':
+                _sb = float(str(o_sayac_basinci_kpa).replace(',', '.'))
+                o_sayac_basinci_mmhg = f"{_sb * 7.50062:.2f}"
+        except Exception:
+            o_sayac_basinci_mmhg = ''
+
+        # Referans basınç (şimdilik boş bırakıyoruz)
+        o_ref_basinc_kpa = ''
+        o_ref_basinc_mmhg = ''
+
+        # Pitot dP: 1. ölçüm ORTALAMA 20. sütun
+        o_pitot_dp_pa = avg_row.get('deger_20', '')
+        o_pitot_dp_mmhg = ''
+        try:
+            if str(o_pitot_dp_pa).strip() != '':
+                _p = float(str(o_pitot_dp_pa).replace(',', '.'))
+                o_pitot_dp_mmhg = f"{_p * 0.00750062:.4f}"
+        except Exception:
+            o_pitot_dp_mmhg = ''
+        o_izok_verim = avg_row.get('deger_6', '')
+        
+        # Özet rapor placeholder'larını değiştir
+        template = template.replace('{o_baslangic|16}', (o_baslangic or '')[:16])
+        template = template.replace('{o_bitis|16}', (o_bitis or '')[:16])
+        template = template.replace('{o_ornekleme_sure_hhmm|6}', (o_ornekleme_sure_hhmm or '')[:6])
+        template = template.replace('{o_ort_baca_hizi_ms|6,1}', fmt(o_ort_baca_hizi_ms, 6, 1))
+        template = template.replace('{o_ort_vakum_debi_nl_d|5,1}', fmt(o_ort_vakum_debi_nl_d, 5, 1))
+        template = template.replace('{o_ort_vakum_debi_l_d|5,1}', fmt(o_ort_vakum_debi_l_d, 5, 1))
+        template = template.replace('{o_kurugaz_nl|7,1}', fmt(o_kurugaz_nl, 7, 1))
+        template = template.replace('{o_sayac_hacmi_l|7,1}', fmt(o_sayac_hacmi_l, 7, 1))
+        template = template.replace('{o_baca_sicak_c|6,1}', fmt(o_baca_sicak_c, 6, 1))
+        template = template.replace('{o_sayac_gaz_c|6,1}', fmt(o_sayac_gaz_c, 6, 1))
+        template = template.replace('{o_ref_sic_c|4,1}', fmt(o_ref_sic_c, 4, 1))
+        template = template.replace('{o_baca_mutlak_kpa|7,2}', fmt(o_baca_mutlak_kpa, 7, 2))
+        template = template.replace('{o_baca_mutlak_mmhg|7,2}', fmt(o_baca_mutlak_mmhg, 7, 2))
+        template = template.replace('{o_sayac_basinci_kpa|7,2}', fmt(o_sayac_basinci_kpa, 7, 2))
+        template = template.replace('{o_sayac_basinci_mmhg|7,2}', fmt(o_sayac_basinci_mmhg, 7, 2))
+        template = template.replace('{o_ref_basinc_kpa|7,2}', fmt(o_ref_basinc_kpa, 7, 2))
+        template = template.replace('{o_ref_basinc_mmhg|7,2}', fmt(o_ref_basinc_mmhg, 7, 2))
+        template = template.replace('{o_pitot_dp_pa|7,2}', fmt(o_pitot_dp_pa, 7, 2))
+        template = template.replace('{o_pitot_dp_mmhg|7,4}', fmt(o_pitot_dp_mmhg, 7, 4))
+        template = template.replace('{o_izok_verim|5,2}', fmt(o_izok_verim, 5, 2))
+    
+    return template
+
+# @app.route('/api/admin/restore', methods=['POST']) - Admin sistemi silindi
+# def api_admin_restore(): - Admin sistemi silindi
     """Admin için veri geri yükleme"""
     if not session.get('logged_in'):
         return jsonify({'success': False, 'error': 'Oturum açmanız gerekiyor'}), 401
@@ -10598,7 +11944,7 @@ def api_admin_restore():
         
         data_files = [
             'firma_kayit.json',
-            'teklif.json', 
+            # 'teklif.json' silindi
             'firma_olcum.json',
             'saha_olc.json',
             'parameters.json',
@@ -10608,7 +11954,7 @@ def api_admin_restore():
             'asgari_fiyatlar.json',
             'forms.json',
             'users.json',
-            'used_teklif_numbers.json',
+            # 'used_teklif_numbers.json' silindi
             'par_saha_header_groups.json'
         ]
         
@@ -10637,6 +11983,7 @@ def api_admin_restore():
 
 def cleanup_old_backups():
     """7 günden eski yedekleri temizler"""
+    import shutil
     backup_dir = 'backups'
     if not os.path.exists(backup_dir):
         return
@@ -10652,8 +11999,8 @@ def cleanup_old_backups():
                 shutil.rmtree(item_path)
                 print(f"🗑️ Eski yedek silindi: {item}")
 
-@app.route('/api/admin/backup-download', methods=['POST'])
-def api_admin_backup_download():
+# @app.route('/api/admin/backup-download', methods=['POST']) - Admin sistemi silindi
+# def api_admin_backup_download(): - Admin sistemi silindi
     """Admin için veri yedekleme - ZIP dosyası olarak indir"""
     if not session.get('logged_in'):
         return jsonify({'success': False, 'error': 'Oturum açmanız gerekiyor'}), 401
@@ -10670,7 +12017,7 @@ def api_admin_backup_download():
         # Yedeklenecek dosyalar
         data_files = [
             'firma_kayit.json',
-            'teklif.json', 
+            # 'teklif.json' silindi
             'firma_olcum.json',
             'saha_olc.json',
             'parameters.json',
@@ -10680,7 +12027,7 @@ def api_admin_backup_download():
             'asgari_fiyatlar.json',
             'forms.json',
             'users.json',
-            'used_teklif_numbers.json',
+            # 'used_teklif_numbers.json' silindi
             'par_saha_header_groups.json'
         ]
         
@@ -10705,8 +12052,10 @@ def api_admin_backup_download():
     except Exception as e:
         return jsonify({'success': False, 'error': f'Yedekleme hatası: {str(e)}'}), 500
 
-@app.route('/api/admin/restore-upload', methods=['POST'])
-def api_admin_restore_upload():
+        return jsonify({'success': False, 'error': f'Dosya okuma hatası: {str(e)}'}), 500
+
+# @app.route('/api/admin/restore-upload', methods=['POST']) - Admin sistemi silindi
+# def api_admin_restore_upload(): - Admin sistemi silindi
     """Admin için veri geri yükleme - Yüklenen dosyalardan"""
     if not session.get('logged_in'):
         return jsonify({'success': False, 'error': 'Oturum açmanız gerekiyor'}), 401
@@ -10735,7 +12084,7 @@ def api_admin_restore_upload():
         
         data_files = [
             'firma_kayit.json',
-            'teklif.json', 
+            # 'teklif.json' silindi
             'firma_olcum.json',
             'saha_olc.json',
             'parameters.json',
@@ -10745,7 +12094,7 @@ def api_admin_restore_upload():
             'asgari_fiyatlar.json',
             'forms.json',
             'users.json',
-            'used_teklif_numbers.json',
+            # 'used_teklif_numbers.json' silindi
             'par_saha_header_groups.json'
         ]
         
@@ -10785,18 +12134,289 @@ def api_admin_restore_upload():
     except Exception as e:
         return jsonify({'success': False, 'error': f'Geri yükleme hatası: {str(e)}'}), 500
 
+
+@app.route('/api/backups/run-now', methods=['POST'])
+def api_backups_run_now():
+    if not session.get('logged_in'):
+        return jsonify({'success': False, 'error': 'Oturum açmanız gerekiyor'}), 401
+    if session.get('username') != 'admin':
+        return jsonify({'success': False, 'error': 'Bu işlem için admin yetkisi gerekiyor'}), 403
+
+    try:
+        from datetime import datetime as _dt
+        import zipfile
+
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        backup_base_dir = os.path.join(base_dir, 'backups')
+        os.makedirs(backup_base_dir, exist_ok=True)
+
+        timestamp = _dt.now().strftime('%Y%m%d_%H%M%S')
+        backup_name = f'backup_{timestamp}'
+        backup_dir = os.path.join(backup_base_dir, backup_name)
+        os.makedirs(backup_dir, exist_ok=True)
+
+        excluded_dirs = {'backups', 'yedek', '__pycache__', '.git', '.idea', 'venv', '.venv', 'env'}
+
+        copied = []
+        for root_dir, dirs, files in os.walk(base_dir):
+            dirs[:] = [d for d in dirs if d not in excluded_dirs]
+
+            for file_name in files:
+                src = os.path.join(root_dir, file_name)
+                rel_path = os.path.relpath(src, base_dir)
+                dest_path = os.path.join(backup_dir, rel_path)
+                dest_dir = os.path.dirname(dest_path)
+                if dest_dir and not os.path.exists(dest_dir):
+                    os.makedirs(dest_dir, exist_ok=True)
+                shutil.copy2(src, dest_path)
+                copied.append(rel_path)
+
+        cleanup_old_backups()
+
+        zip_root = os.path.join(base_dir, 'yedek')
+        os.makedirs(zip_root, exist_ok=True)
+        zip_path = os.path.join(zip_root, f'emisyon_backup_{timestamp}.zip')
+
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            for root_dir, _dirs, files in os.walk(backup_dir):
+                for file_name in files:
+                    full_path = os.path.join(root_dir, file_name)
+                    rel_path = os.path.relpath(full_path, backup_dir)
+                    zip_file.write(full_path, arcname=rel_path)
+
+        return jsonify({
+            'success': True,
+            'message': f'{len(copied)} dosya yedeklendi.',
+            'backup_name': backup_name,
+            'backup_dir': backup_dir,
+            'zip_file': zip_path,
+            'files': copied
+        })
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'Yedekleme hatası: {str(e)}'}), 500
+
+
+@app.route('/api/backups/list', methods=['GET'])
+def api_backups_list():
+    if not session.get('logged_in'):
+        return jsonify({'success': False, 'error': 'Oturum açmanız gerekiyor'}), 401
+    if session.get('username') != 'admin':
+        return jsonify({'success': False, 'error': 'Bu işlem için admin yetkisi gerekiyor'}), 403
+
+    backup_base_dir = 'backups'
+    if not os.path.exists(backup_base_dir):
+        return jsonify({'success': True, 'backups': []})
+
+    backups = []
+    for item in os.listdir(backup_base_dir):
+        if not item.startswith('backup_'):
+            continue
+        item_path = os.path.join(backup_base_dir, item)
+        if not os.path.isdir(item_path):
+            continue
+
+        try:
+            created_ts = os.path.getctime(item_path)
+        except OSError:
+            created_ts = 0
+
+        total_size = 0
+        for root_dir, _dirs, files in os.walk(item_path):
+            for fname in files:
+                fpath = os.path.join(root_dir, fname)
+                try:
+                    total_size += os.path.getsize(fpath)
+                except OSError:
+                    pass
+
+        created_dt = datetime.fromtimestamp(created_ts) if created_ts else None
+        backups.append({
+            'name': item,
+            'created_at': created_dt.isoformat(sep=' ') if created_dt else '',
+            'display_date': created_dt.strftime('%d.%m.%Y %H:%M') if created_dt else '',
+            'size_bytes': total_size
+        })
+
+    backups.sort(key=lambda b: b.get('created_at', ''), reverse=True)
+
+    return jsonify({'success': True, 'backups': backups})
+
+
+@app.route('/api/backups/delete', methods=['POST'])
+def api_backups_delete():
+    if not session.get('logged_in'):
+        return jsonify({'success': False, 'error': 'Oturum açmanız gerekiyor'}), 401
+    if session.get('username') != 'admin':
+        return jsonify({'success': False, 'error': 'Bu işlem için admin yetkisi gerekiyor'}), 403
+
+    data = request.get_json(silent=True) or {}
+    names = data.get('names') or []
+    if not isinstance(names, list) or not names:
+        return jsonify({'success': False, 'error': 'Silinecek yedek bulunamadı'}), 400
+
+    backup_base_dir = 'backups'
+    deleted = []
+
+    for name in names:
+        if not isinstance(name, str):
+            continue
+        if not name.startswith('backup_'):
+            continue
+        if '/' in name or '\\' in name or '..' in name:
+            continue
+
+        item_path = os.path.join(backup_base_dir, name)
+        if os.path.isdir(item_path):
+            try:
+                shutil.rmtree(item_path)
+                deleted.append(name)
+            except Exception:
+                continue
+
+    return jsonify({'success': True, 'deleted': deleted, 'count': len(deleted)})
+
+
+@app.route('/api/backups/restore', methods=['POST'])
+def api_backups_restore():
+    if not session.get('logged_in'):
+        return jsonify({'success': False, 'error': 'Oturum açmanız gerekiyor'}), 401
+    if session.get('username') != 'admin':
+        return jsonify({'success': False, 'error': 'Bu işlem için admin yetkisi gerekiyor'}), 403
+
+    data = request.get_json(silent=True) or {}
+    name = data.get('name') or ''
+    if not isinstance(name, str) or not name.startswith('backup_') or '/' in name or '\\' in name or '..' in name:
+        return jsonify({'success': False, 'error': 'Geçersiz yedek adı'}), 400
+
+    backup_base_dir = 'backups'
+    backup_path = os.path.join(backup_base_dir, name)
+    if not os.path.isdir(backup_path):
+        return jsonify({'success': False, 'error': 'Yedek klasörü bulunamadı'}), 404
+
+    try:
+        current_backup_time = datetime.now().strftime('%Y%m%d_%H%M%S')
+        current_backup_dir = f'backups/current_backup_{current_backup_time}'
+        os.makedirs(current_backup_dir, exist_ok=True)
+
+        data_files = [
+            'firma_kayit.json',
+            'firma_olcum.json',
+            'saha_olc.json',
+            'parameters.json',
+            'baca_bilgileri.json',
+            'parametre_olcum.json',
+            'parametre_sahabil.json',
+            'asgari_fiyatlar.json',
+            'forms.json',
+            'users.json',
+            'par_saha_header_groups.json'
+        ]
+
+        for fname in data_files:
+            if os.path.exists(fname):
+                shutil.copy2(fname, os.path.join(current_backup_dir, fname))
+
+        restored = []
+        for fname in data_files:
+            src = os.path.join(backup_path, fname)
+            if os.path.exists(src):
+                shutil.copy2(src, fname)
+                restored.append(fname)
+
+        return jsonify({'success': True, 'restored_files': restored, 'backup_used': name})
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'Geri yükleme hatası: {str(e)}'}), 500
+
+
+# HESAPLAMALAR TABLOSU API ENDPOINT'LERİ
+@app.route('/api/save_hesaplama_data', methods=['POST'])
+def save_hesaplama_data():
+    try:
+        data = request.get_json()
+        
+        with open('hesaplama_data.json', 'w', encoding='utf-8') as f:
+            json.dump(data['data'], f, ensure_ascii=False, indent=2)
+        
+        return jsonify({'success': True, 'message': 'Hesaplama verileri kaydedildi'})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/load_hesaplama_data', methods=['GET'])
+def load_hesaplama_data():
+    try:
+        if os.path.exists('hesaplama_data.json'):
+            with open('hesaplama_data.json', 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            return jsonify({'success': True, 'data': data})
+        else:
+            return jsonify({'success': False, 'message': 'Dosya bulunamadı'})
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/get_rapor2_data', methods=['GET'])
+def get_rapor2_data():
+    """RAPOR2 verilerini yükle"""
+    try:
+        if os.path.exists(RAPOR2_FILE):
+            with open(RAPOR2_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            return jsonify({'success': True, 'content': data.get('content', '')})
+        else:
+            return jsonify({'success': True, 'content': ''})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/save_rapor2_data', methods=['POST'])
+def save_rapor2_data():
+    """RAPOR2 verilerini kaydet"""
+    if not session.get('logged_in'):
+        return jsonify({'success': False, 'error': 'Oturum açmanız gerekiyor'}), 401
+    
+    try:
+        data = request.get_json()
+        content = data.get('content', '')
+        
+        # rapor2_sablonu.json dosyasına kaydet
+        with open(RAPOR2_FILE, 'w', encoding='utf-8') as f:
+            json.dump({'content': content}, f, ensure_ascii=False, indent=2)
+        
+        return jsonify({'success': True, 'message': 'Rapor şablonu başarıyla kaydedildi'})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/save_cikti_raporu', methods=['POST'])
+def save_cikti_raporu():
+    """Çıktı raporunu kaydet"""
+    try:
+        data = request.get_json()
+        content = data.get('content', '')
+        
+        # cikti_raporu.txt dosyasına kaydet
+        with open('cikti_raporu.txt', 'w', encoding='utf-8') as f:
+            f.write(content)
+        
+        return jsonify({'success': True, 'message': 'Çıktı raporu kaydedildi'})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 if __name__ == '__main__':
     # Teklif numarası benzersizliği için migration çalıştır
-    migrate_existing_teklif_numbers()
+    # migrate_existing_teklif_numbers() - teklif sistemi silindi
     
-    # Mevcut teklif numaralarını 3 haneli formata dönüştür
-    convert_teklif_numbers_to_3_digit()
+    # Mevcut teklif numaralarını 3 haneli formata dönüştür - teklif sistemi silindi
+    # convert_teklif_numbers_to_3_digit() - teklif sistemi silindi
     
-    # Mevcut teklifleri 001'den başlayarak yeniden sırala
-    resequence_teklif_numbers()
+    # Mevcut teklifleri 001'den başlayarak yeniden sırala - teklif sistemi silindi
+    # resequence_teklif_numbers() - teklif sistemi silindi
     
     # Render için port ayarı (Render'ın verdiği PORT değişkenini kullan, yoksa 5001 kullan)
-    port = int(os.environ.get('PORT', 5001))
+    port = int(os.environ.get('PORT', 7000))
     
     # Geliştirme modu kontrolü - her zaman debug=True
     debug = True

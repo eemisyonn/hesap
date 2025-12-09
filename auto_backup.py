@@ -61,15 +61,11 @@ def main():
     # İlk yedekleme
     create_backup()
     
-    # Her saat başı yedekleme
-    schedule.every().hour.do(create_backup)
-    
-    # Her gün gece yarısı yedekleme
-    schedule.every().day.at("00:00").do(create_backup)
+    # Haftada bir otomatik yedekleme
+    schedule.every().week.do(create_backup)
     
     print("⏰ Yedekleme zamanlaması ayarlandı:")
-    print("  - Her saat başı")
-    print("  - Her gün gece yarısı")
+    print("  - Haftada bir kez")
     print("  - 7 günden eski yedekler otomatik silinir")
     
     # Sürekli çalış

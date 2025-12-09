@@ -1,7 +1,0 @@
-requests>=2.25.1
-threading
-json
-time
-random
-datetime
-concurrent.futures 

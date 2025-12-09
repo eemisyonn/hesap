@@ -3,7 +3,7 @@ echo === EMISYON SAHA UYGULAMASI BAŞLATILIYOR ===
 echo.
 
 REM Proje dizinine git
-cd /d "C:\Users\FOCUSGC\Desktop\AKARE-YAZILIM\EMISYON SAHA\CURSOR-EMISYON\CURSAR-EMISYON-1"
+cd /d "C:\Users\FOCUSGC\Desktop\AKARE-YAZILIM\HESAP\HESAP-1"
 echo Proje dizinine gidiliyor...
 
 REM Python kontrol
@@ -24,11 +24,11 @@ if %errorlevel% neq 0 (
 REM Uygulamayı başlat
 echo.
 echo === UYGULAMA BAŞLATILIYOR ===
-echo Tarayıcınızda http://localhost:5001 adresini açın
+echo Tarayıcınızda http://localhost:7000 adresini açın
 echo Durdurmak için Ctrl+C tuşlayın
 echo.
 
-set PORT=5001
+set PORT=7000
 set FLASK_ENV=development
 set FLASK_DEBUG=1
 python app.py
