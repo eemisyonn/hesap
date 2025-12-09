@@ -6,7 +6,7 @@ RUN apt-get update \
        libffi-dev \
        libcairo2 \
        libpango-1.0-0 \
-       libgdk-pixbuf2.0-0 \
+       libgdk-pixbuf-2.0-0 \
        libssl-dev \
        libxml2 \
        libxslt1.1 \
