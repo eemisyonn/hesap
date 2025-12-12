@@ -551,8 +551,8 @@
                                     <i class="fas fa-calculator me-2"></i>3. AŞAMA - HESAPLAMALAR
                                 </h5>
                                 <div class="btn-group">
-                                    <button id="btnAddRowAsama3" type="button" class="btn btn-success btn-sm" onclick="exportAsama3TablesToExcel()">
-                                        <i class="fas fa-file-excel me-1"></i>Excele Aktar
+                                    <button id="btnAddRowAsama3" type="button" class="btn btn-success btn-sm" onclick="addRowToAllExcelTables()">
+                                        <i class="fas fa-plus me-1"></i>Satır Ekle
                                     </button>
                                     <button id="btnHesaplaAsama3" type="button" class="btn btn-primary btn-sm" onclick="onClickHesaplaAsama3()">
                                         <i class="fas fa-calculator me-1"></i>Hesapla
@@ -8897,91 +8897,6 @@ function calculateAllExcelTables() {
     tables.forEach((table, index) => {
         calculateExcelTable(index);
     });
-}
-
-// 3. Aşama Excel tablolarını CSV formatında dışa aktar
-function exportAsama3TablesToExcel() {
-    try {
-        const cards = document.querySelectorAll('#asama3Content .card');
-        if (!cards.length) {
-            alert('Dışa aktarılacak hesaplama tablosu bulunamadı.');
-            return;
-        }
-
-        const lines = [];
-
-        cards.forEach((card, tableIndex) => {
-            const table = card.querySelector('table');
-            if (!table) return;
-
-            const titleEl = card.querySelector('.card-header h6');
-            const title = titleEl ? titleEl.textContent.trim().replace(/\s+/g, ' ') : `Tablo ${tableIndex + 1}`;
-
-            // Tablo başlığı satırı
-            lines.push(`"${title}"`);
-
-            // Thead
-            const thead = table.querySelector('thead');
-            if (thead) {
-                const headerCells = thead.querySelectorAll('tr:last-child th');
-                if (headerCells.length) {
-                    const headerRow = Array.from(headerCells).map(th => {
-                        const text = (th.textContent || '').trim().replace(/"/g, '""');
-                        return `"${text}"`;
-                    }).join(';');
-                    lines.push(headerRow);
-                }
-            }
-
-            // Tbody
-            const tbody = table.querySelector('tbody');
-            if (tbody) {
-                tbody.querySelectorAll('tr').forEach(tr => {
-                    const cells = Array.from(tr.children).map(td => {
-                        let value = '';
-                        const input = td.querySelector('input, select, textarea');
-                        if (input) {
-                            value = (input.value || '').toString();
-                        } else {
-                            value = (td.textContent || '').toString();
-                        }
-                        value = value.trim().replace(/"/g, '""');
-                        return `"${value}"`;
-                    });
-                    if (cells.length) {
-                        lines.push(cells.join(';'));
-                    }
-                });
-            }
-
-            // Tablolar arasında boş satır
-            lines.push('');
-        });
-
-        if (!lines.length) {
-            alert('Dışa aktarılacak veri bulunamadı.');
-            return;
-        }
-
-        const csvContent = lines.join('\r\n');
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-
-        const now = new Date();
-        const dateStr = now.toISOString().split('T')[0];
-        const fileName = `asama3_hesaplamalar_${dateStr}.csv`;
-
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    } catch (err) {
-        console.error('[exportAsama3TablesToExcel] Hata:', err);
-        alert('Excele aktarma sırasında bir hata oluştu.');
-    }
 }
 
 // Başlangıç tarihlerini yeniden hesapla (J sütunu değeri dahil)

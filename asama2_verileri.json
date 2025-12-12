@@ -7,71 +7,51 @@
     "asama": 2,
     "parametreler": [
       {
-        "parametre": "Toz_EPA5\n                \n                    \n                    Hız: 12 m/s | Sıcaklık: 125 °C | Basınç: 100.98 kPa | Nem: 2% | Atmosfer: 101.3 kPa | Seri: M5PMA- 1710",
-        "baslangic": "01/12/25 10:00",
-        "ayarlananSure": "1080.0",
-        "traversSayisi": "3",
-        "nozzleCapi": "10",
-        "sure": "360",
-        "sayacHacmi": "1017.9",
-        "ortVakumDebi": "56.5"
-      }
-    ],
-    "kayit_tarihi": "2025-12-07 23:48:40"
-  },
-  {
-    "firma": "kaan",
-    "olcum_kodu": "2",
-    "baca": "1 no baca",
-    "personel": "",
-    "asama": 2,
-    "parametreler": [
-      {
-        "parametre": "AĞIR MET_EPA 29\n                \n                    \n                    Hız: 10 m/s | Sıcaklık: 55 °C | Basınç: 101 kPa | Nem: 3% | Atmosfer: 101.3 kPa | Seri: M5PMA- 1710",
-        "baslangic": "03/12/25 00:54",
-        "ayarlananSure": "1080.0",
-        "traversSayisi": "3",
+        "parametre": "AĞIR MET_EPA 29\n                \n                    \n                    Hız: 10 m/s | Sıcaklık: 80 °C | Basınç: 101.3 kPa | Nem: 4% | Atmosfer: 101.1 kPa | Seri: M5PMA- 1710",
+        "baslangic": "01/12/25 14:18",
+        "ayarlananSure": "2880.0",
+        "traversSayisi": "24",
         "nozzleCapi": "6",
-        "sure": "360",
-        "sayacHacmi": "305.4",
+        "sure": "120",
+        "sayacHacmi": "814.3",
         "ortVakumDebi": "17",
-        "olcum1Bitis": "03/12/25 01:12",
-        "olcum2Baslangic": "03/12/25 01:23",
-        "olcum2Bitis": "03/12/25 01:41",
-        "olcum3Baslangic": "03/12/25 01:52",
-        "olcum3Bitis": "03/12/25 02:10"
+        "olcum1Bitis": "01/12/25 15:06",
+        "olcum2Baslangic": "01/12/25 15:13",
+        "olcum2Bitis": "01/12/25 16:01",
+        "olcum3Baslangic": "01/12/25 16:13",
+        "olcum3Bitis": "01/12/25 17:01"
       },
       {
-        "parametre": "Toz_EPA5\n                \n                    \n                    Hız: 10 m/s | Sıcaklık: 55 °C | Basınç: 101 kPa | Nem: 3% | Atmosfer: 101.3 kPa | Seri: M5PMA- 1710",
-        "baslangic": "11/12/25 04:59",
-        "ayarlananSure": "360.0",
-        "traversSayisi": "2",
-        "nozzleCapi": "6",
-        "sure": "180",
-        "sayacHacmi": "101.8",
-        "ortVakumDebi": "17",
-        "olcum1Bitis": "11/12/25 05:05",
-        "olcum2Baslangic": "11/12/25 05:13",
-        "olcum2Bitis": "11/12/25 05:19",
-        "olcum3Baslangic": "11/12/25 05:26",
-        "olcum3Bitis": "11/12/25 05:32"
-      },
-      {
-        "parametre": "SÜLFÜRİK ASİT\n                \n                    \n                    Hız: 10 m/s | Sıcaklık: 55 °C | Basınç: 101 kPa | Nem: 3% | Atmosfer: 101.3 kPa | Seri: M5PMA- 1710",
-        "baslangic": "12/12/25 00:55",
-        "ayarlananSure": "480.0",
-        "traversSayisi": "2",
-        "nozzleCapi": "8",
+        "parametre": "SÜLFÜRİK ASİT\n                \n                    \n                    Hız: 10 m/s | Sıcaklık: 80 °C | Basınç: 101.3 kPa | Nem: 4% | Atmosfer: 101.1 kPa | Seri: M5PMA- 1710",
+        "baslangic": "02/12/25 17:18",
+        "ayarlananSure": "2880.0",
+        "traversSayisi": "12",
+        "nozzleCapi": "7",
         "sure": "240",
-        "sayacHacmi": "241.3",
+        "sayacHacmi": "1108.4",
+        "ortVakumDebi": "23.1",
+        "olcum1Bitis": "02/12/25 18:06",
+        "olcum2Baslangic": "02/12/25 18:15",
+        "olcum2Bitis": "02/12/25 19:03",
+        "olcum3Baslangic": "02/12/25 19:15",
+        "olcum3Bitis": "02/12/25 20:03"
+      },
+      {
+        "parametre": "Toz_EPA5\n                \n                    \n                    Hız: 10 m/s | Sıcaklık: 80 °C | Basınç: 101.3 kPa | Nem: 4% | Atmosfer: 101.1 kPa | Seri: M5PMA- 1710",
+        "baslangic": "03/12/25 07:18",
+        "ayarlananSure": "2880.0",
+        "traversSayisi": "6",
+        "nozzleCapi": "8",
+        "sure": "480",
+        "sayacHacmi": "1447.6",
         "ortVakumDebi": "30.2",
-        "olcum1Bitis": "12/12/25 01:03",
-        "olcum2Baslangic": "12/12/25 01:12",
-        "olcum2Bitis": "12/12/25 01:20",
-        "olcum3Baslangic": "12/12/25 01:31",
-        "olcum3Bitis": "12/12/25 01:39"
+        "olcum1Bitis": "03/12/25 08:06",
+        "olcum2Baslangic": "03/12/25 08:13",
+        "olcum2Bitis": "03/12/25 09:01",
+        "olcum3Baslangic": "03/12/25 09:09",
+        "olcum3Bitis": "03/12/25 09:57"
       }
     ],
-    "kayit_tarihi": "2025-12-08 00:55:30"
+    "kayit_tarihi": "2025-12-12 14:32:17"
   }
 ]

@@ -1,0 +1,112 @@
+[
+    [
+        "1. AŞAMA",
+        "BİRİM",
+        "2. AŞAMA",
+        "BİRİM",
+        "3. AŞAMA",
+        "BİRİM",
+        "4. AŞAMA",
+        "BİRİM",
+        ""
+    ],
+    [
+        "Cihaz Seri    :",
+        "",
+        "Param Seç",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
+        "Baca No       :",
+        "",
+        "Baslangic     :",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
+        "Ort.baca hizi :",
+        "m/s",
+        "Ayarlanan Sure:",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
+        "Baca sicakligi:",
+        "C",
+        "Travers sayisi:",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
+        "Baca mutlk bas:",
+        "kPa",
+        "Nozzle capi   :",
+        "mm",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
+        "Nem           :",
+        "",
+        "Sure          :",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
+        "Sayac gaz sic.:",
+        "C",
+        "Sayac hacmi   :",
+        "l",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
+        "Atmosfer basnc:",
+        "kPa",
+        "Ort.vakum debi:",
+        "l/d",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ],
+    [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+    ]
+]

@@ -1,38 +1,21 @@
 [
     {
-        "id": "2796b673-5042-4f54-b288-6272516d1640",
+        "id": "f658aa9a-a3f3-4335-96b3-94263760e23c",
         "firma_adi": "adem",
         "olcum_kodu": "1",
-        "baslangic_tarihi": "2025-12-01",
-        "bitis_tarihi": "2025-12-02",
-        "durum": "Aktif",
-        "personel": [],
-        "baca_sayisi": "1",
-        "baca_parametreleri": {
-            "proses": [
-                "Toz_EPA5"
-            ]
-        },
-        "notlar": "",
-        "olusturma_tarihi": "2025-12-07T22:58:36.046100"
-    },
-    {
-        "id": "8aa5b9fc-a294-423d-ab5c-4f30d63d042a",
-        "firma_adi": "kaan",
-        "olcum_kodu": "2",
-        "baslangic_tarihi": "2025-12-08",
+        "baslangic_tarihi": "",
         "bitis_tarihi": "",
         "durum": "Aktif",
         "personel": [],
         "baca_sayisi": "1",
         "baca_parametreleri": {
-            "1 no baca ": [
+            "proses": [
                 "Toz_EPA5",
                 "AĞIR MET_EPA 29",
                 "SÜLFÜRİK ASİT"
             ]
         },
         "notlar": "",
-        "olusturma_tarihi": "2025-12-07T23:50:35.197094"
+        "olusturma_tarihi": "2025-12-12T14:16:58.518577"
     }
 ]

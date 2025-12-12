@@ -7,28 +7,12 @@
     "asama": 1,
     "cihazSeri": "M5PMA- 1710",
     "bacaNo": "1",
-    "ortalamaBacaHizi": "12",
-    "bacaSicakligi": "125",
-    "bacaMutlakBasinci": "100.98",
-    "nem": "2",
-    "sayacGazSicakligi": "19",
-    "atmosferBasinci": "101.3",
-    "kayit_tarihi": "2025-12-07 23:48:38"
-  },
-  {
-    "firma": "kaan",
-    "olcum_kodu": "2",
-    "baca": "1 no baca",
-    "personel": "",
-    "asama": 1,
-    "cihazSeri": "M5PMA- 1710",
-    "bacaNo": "1",
     "ortalamaBacaHizi": "10",
-    "bacaSicakligi": "55",
-    "bacaMutlakBasinci": "101",
-    "nem": "3",
-    "sayacGazSicakligi": "20",
-    "atmosferBasinci": "101.3",
-    "kayit_tarihi": "2025-12-08 00:54:39"
+    "bacaSicakligi": "80",
+    "bacaMutlakBasinci": "101.3",
+    "nem": "4",
+    "sayacGazSicakligi": "30",
+    "atmosferBasinci": "101.1",
+    "kayit_tarihi": "2025-12-12 14:32:14"
   }
 ]

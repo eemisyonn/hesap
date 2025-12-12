@@ -6,37 +6,27 @@
         "baca_adi": "proses",
         "parametre": "Toz_EPA5",
         "personel_adi": "",
-        "kayit_tarihi": "2025-12-07T22:58:36.047987",
-        "id": "1e759dca-af64-48a5-b297-0e8caeaefd2c"
+        "kayit_tarihi": "2025-12-12T14:16:58.520631",
+        "id": "7648991c-8ee2-4a54-8a53-7184dbdd6d09"
     },
     {
-        "firma_adi": "kaan",
-        "olcum_kodu": "2",
-        "baca_no": "1 no baca ",
-        "baca_adi": "1 no baca ",
-        "parametre": "Toz_EPA5",
-        "personel_adi": "",
-        "kayit_tarihi": "2025-12-07T23:50:35.199043",
-        "id": "de541cea-dd4a-46d7-bd81-035a35dd5105"
-    },
-    {
-        "firma_adi": "kaan",
-        "olcum_kodu": "2",
-        "baca_no": "1 no baca ",
-        "baca_adi": "1 no baca ",
+        "firma_adi": "adem",
+        "olcum_kodu": "1",
+        "baca_no": "proses",
+        "baca_adi": "proses",
         "parametre": "AĞIR MET_EPA 29",
         "personel_adi": "",
-        "kayit_tarihi": "2025-12-07T23:50:35.199058",
-        "id": "66b2c43a-71ce-4310-93eb-26fce01dfd9b"
+        "kayit_tarihi": "2025-12-12T14:16:58.520643",
+        "id": "3ca0c555-2d70-45b3-8b3e-cefda7317262"
     },
     {
-        "firma_adi": "kaan",
-        "olcum_kodu": "2",
-        "baca_no": "1 no baca ",
-        "baca_adi": "1 no baca ",
+        "firma_adi": "adem",
+        "olcum_kodu": "1",
+        "baca_no": "proses",
+        "baca_adi": "proses",
         "parametre": "SÜLFÜRİK ASİT",
         "personel_adi": "",
-        "kayit_tarihi": "2025-12-07T23:50:35.199063",
-        "id": "50d84bf5-495f-442d-bce0-502791349dca"
+        "kayit_tarihi": "2025-12-12T14:16:58.520646",
+        "id": "177424e1-97d7-48a0-9d3c-b0466f730942"
     }
 ]

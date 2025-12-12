@@ -333,7 +333,7 @@
                                 <option value="">Tüm Ölçüm Kodları</option>
                             </datalist>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label for="bacaSelect" class="form-label">Baca Seçin</label>
                             <div class="input-group input-group-sm">
                                 <input type="text" class="form-control" id="bacaSelect" placeholder="Baca seçin veya yazın..." list="bacaList" onchange="checkBacaBilgileri()">
@@ -348,8 +348,23 @@
                                 <option value="">Tüm Bacalar</option>
                             </datalist>
                         </div>
-                        <div class="col-md-3 d-flex align-items-end gap-2">
-                            <button type="button" class="btn btn-danger btn-sm" id="asama4DirectButton" onclick="goToAsama4FromSelection()" disabled>
+                        <div class="col-md-2">
+                            <label for="personelSelect" class="form-label">Personel Seçin</label>
+                            <div class="input-group input-group-sm">
+                                <input type="text" class="form-control" id="personelSelect" placeholder="Personel seçin veya yazın..." list="personelList" onchange="checkBacaBilgileri()">
+                                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+                                <ul class="dropdown-menu" id="personelDropdown">
+                                    <li><a class="dropdown-item" href="#" onclick="selectFromDropdown('personelSelect', '')">Tüm Personel</a></li>
+                                </ul>
+                            </div>
+                            <datalist id="personelList">
+                                <option value="">Tüm Personel</option>
+                            </datalist>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end gap-2">
+                            image.png                            <button type="button" class="btn btn-danger btn-sm" id="asama4DirectButton" onclick="goToAsama4FromSelection()" disabled>
                                 <i class="fas fa-rocket me-1"></i>Doğrudan 4. Aşama
                             </button>
                             <button type="button" class="btn btn-primary btn-sm" id="asamaGecButton" onclick="goToAsama1()" disabled>
@@ -366,8 +381,6 @@
                             </button>
                         </div>
                     </div>
-
-                    <input type="hidden" id="personelSelect" value="">
 
                     <div class="card mb-3">
                         <div class="card-header d-flex justify-content-between align-items-center">
@@ -419,9 +432,9 @@
                                     <tbody>
                                         {% if saha_olcumler %}
                                             {% for kayit in saha_olcumler %}
-                                            <tr data-id="{{ kayit.id }}" data-ids="{{ kayit.ids | join(',') }}">
+                                            <tr data-id="{{ kayit.id }}">
                                                 <td class="text-center">
-                                                    <input type="checkbox" class="form-check-input saha-row-select" data-id="{{ kayit.id }}" data-ids="{{ kayit.ids | join(',') }}" onclick="onSahaRowSelectChange()">
+                                                    <input type="checkbox" class="form-check-input saha-row-select" data-id="{{ kayit.id }}" onclick="onSahaRowSelectChange()">
                                                 </td>
                                                 <td>{{ kayit.firma_adi or kayit.firma }}</td>
                                                 <td>{{ kayit.olcum_kodu }}</td>
@@ -478,29 +491,29 @@
                                     </div>
                                 <div class="col-md-3">
                                     <label class="form-label">Ortalama Baca Hızı (m/s):</label>
-                                    <input type="number" step="0.1" class="form-control" id="ortBacaHizi" onchange="updateAllParametreHeaders()">
+                                    <input type="number" step="0.1" class="form-control" id="ortBacaHizi" placeholder="0.0" onchange="updateAllParametreHeaders()">
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label">Baca Sıcaklığı (°C):</label>
-                                    <input type="number" step="0.1" class="form-control" id="bacaSicakligi" onchange="updateAllParametreHeaders()">
+                                    <input type="number" step="0.1" class="form-control" id="bacaSicakligi" placeholder="0.0" onchange="updateAllParametreHeaders()">
                                 </div>
                             </div>
                                 <div class="row mt-3">
                                 <div class="col-md-3">
                                     <label class="form-label">Baca Mutlak Basıncı (kPa):</label>
-                                    <input type="number" step="0.1" class="form-control" id="bacaMutlakBasinc">
+                                    <input type="number" step="0.1" class="form-control" id="bacaMutlakBasinc" placeholder="0.0">
                                     </div>
                                 <div class="col-md-3">
                                     <label class="form-label">Nem (%):</label>
-                                    <input type="number" step="0.1" class="form-control" id="nem">
+                                    <input type="number" step="0.1" class="form-control" id="nem" placeholder="0.0">
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label">Sayac Gaz Sıcaklığı (°C):</label>
-                                    <input type="number" step="0.1" class="form-control" id="sayacGazSicakligi">
+                                    <input type="number" step="0.1" class="form-control" id="sayacGazSicakligi" placeholder="0.0">
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label">Atmosfer Basıncı (kPa):</label>
-                                    <input type="number" step="0.1" class="form-control" id="atmosferBasinci">
+                                    <input type="number" step="0.1" class="form-control" id="atmosferBasinci" placeholder="0.0">
                                 </div>
                             </div>
                                 <div class="row mt-3">
@@ -551,10 +564,10 @@
                                     <i class="fas fa-calculator me-2"></i>3. AŞAMA - HESAPLAMALAR
                                 </h5>
                                 <div class="btn-group">
-                                    <button id="btnAddRowAsama3" type="button" class="btn btn-success btn-sm" onclick="exportAsama3TablesToExcel()">
-                                        <i class="fas fa-file-excel me-1"></i>Excele Aktar
+                                    <button id="btnAddRowAsama3" type="button" class="btn btn-success btn-sm" onclick="addRowToAllExcelTables()">
+                                        <i class="fas fa-plus me-1"></i>Satır Ekle
                                     </button>
-                                    <button id="btnHesaplaAsama3" type="button" class="btn btn-primary btn-sm" onclick="onClickHesaplaAsama3()">
+                                    <button id="btnHesaplaAsama3" type="button" class="btn btn-primary btn-sm" onclick="calculateAllExcelTables()">
                                         <i class="fas fa-calculator me-1"></i>Hesapla
                                     </button>
                                     <button id="btnKilitleAsama3" type="button" class="btn btn-warning btn-sm" onclick="toggleAsama3Lock()">
@@ -774,36 +787,20 @@ function filterSahaOlcumTable() {
 }
 
 // --- Kayıtlı saha ölçümleri tablosu toplu seçim / işlemler ---
-function getSelectedSahaGroupIds() {
+function getSelectedSahaIds() {
     const checkboxes = document.querySelectorAll('#sahaOlcumTable .saha-row-select:checked');
     return Array.from(checkboxes).map(cb => cb.getAttribute('data-id')).filter(Boolean);
 }
 
-function getSelectedSahaIds() {
-    const checkboxes = document.querySelectorAll('#sahaOlcumTable .saha-row-select:checked');
-    const allIds = [];
-    checkboxes.forEach(cb => {
-        const idsAttr = cb.getAttribute('data-ids') || cb.getAttribute('data-id');
-        if (!idsAttr) return;
-        idsAttr.split(',').forEach(function(id) {
-            const trimmed = (id || '').trim();
-            if (trimmed) {
-                allIds.push(trimmed);
-            }
-        });
-    });
-    return Array.from(new Set(allIds));
-}
-
 function updateSahaSelectionUI() {
-    const selectedGroups = getSelectedSahaGroupIds();
+    const selected = getSelectedSahaIds();
     const countSpan = document.getElementById('sahaSelectedCount');
     const delBtn = document.getElementById('sahaBulkDeleteBtn');
     const excelBtn = document.getElementById('sahaBulkExcelBtn');
     const selectAll = document.getElementById('sahaSelectAll');
 
-    if (countSpan) countSpan.textContent = selectedGroups.length.toString();
-    const hasSelection = selectedGroups.length > 0;
+    if (countSpan) countSpan.textContent = selected.length.toString();
+    const hasSelection = selected.length > 0;
     if (delBtn) delBtn.disabled = !hasSelection;
     if (excelBtn) excelBtn.disabled = !hasSelection;
 
@@ -1066,7 +1063,8 @@ document.addEventListener('DOMContentLoaded', function() {
             loadSavedBacaBilgileri();
         });
     
-    // Personel eskiden seçimle geliyordu; artık otomatik yönetildiği için liste yüklenmiyor
+    // Personel listesini yükle
+    loadPersonelListesi();
 });
 
 // Personel listesini yükle
@@ -3584,7 +3582,7 @@ function checkBacaBilgileri() {
     const asama3Button = document.getElementById('asama3GecButton');
     const asama4Button = document.getElementById('asama4GecButton');
     
-    if (firma && olcumKodu && baca) {
+    if (firma && olcumKodu && baca && personel) {
         // Tüm butonları aktif et
         if (asama4DirectButton) {
             asama4DirectButton.disabled = false;
@@ -4430,64 +4428,7 @@ function deleteSahaOlcum(id) {
 
 function printSahaOlcum(id) {
     console.log('printSahaOlcum çağrıldı, id:', id);
-
-    // İlgili satırı bul
-    let row = document.querySelector(`#sahaOlcumTable tr[data-id="${id}"]`);
-    if (!row) {
-        alert('Seçilen satır bulunamadı.');
-        return;
-    }
-
-    const cells = row.querySelectorAll('td');
-    const firma = (cells[1]?.textContent || '').trim();
-    const olcumKodu = (cells[2]?.textContent || '').trim();
-    const baca = (cells[3]?.textContent || '').trim();
-
-    // Personel bilgisi tabloda yok, varsa üst seçimden al
-    const personelSelect = document.getElementById('personelSelect');
-    const personel = personelSelect ? (personelSelect.value || '') : (sessionStorage.getItem('selectedPersonel') || '');
-
-    // Seçimi sessionStorage'a yaz (4. aşama ve diğer fonksiyonlar için)
-    try {
-        if (firma) sessionStorage.setItem('selectedFirma', firma);
-        if (olcumKodu) sessionStorage.setItem('selectedOlcumKodu', olcumKodu);
-        if (baca) sessionStorage.setItem('selectedBaca', baca);
-        if (personel) sessionStorage.setItem('selectedPersonel', personel);
-    } catch (e) {
-        console.warn('Seçim bilgileri sessionStorage\'a yazılamadı:', e);
-    }
-
-    // Mevcut hızlı termal rapor fonksiyonunu kullanarak yazdır
-    if (typeof printTermalRaporFromSelection === 'function') {
-        printTermalRaporFromSelection();
-        return;
-    }
-
-    // Güvenlik için: printTermalRaporFromSelection yoksa doğrudan metin oluşturup yazdır
-    if (typeof generateSelectionText === 'function') {
-        const raporText = generateSelectionText(firma, olcumKodu, baca, personel);
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) {
-            alert('Tarayıcı yazdırma penceresini engelledi. Lütfen açılır pencerelere izin verin.');
-            return;
-        }
-        printWindow.document.write(`
-            <html>
-            <head>
-                <title>Termal Rapor</title>
-                <style>
-                    body { font-family: monospace; font-size: 12px; white-space: pre; }
-                    @media print { body { font-size: 8px; } }
-                </style>
-            </head>
-            <body>${raporText}</body>
-            </html>
-        `);
-        printWindow.document.close();
-        printWindow.print();
-    } else {
-        alert('Yazdırma fonksiyonu tanımlı değil.');
-    }
+    alert('Yazdırma işlemi için backend rapor fonksiyonu henüz bağlanmadı. (ID: ' + id + ')');
 }
 
 // Sayfa yüklendiğinde parametre ölçümlerini de yükle
@@ -5645,8 +5586,7 @@ function loadExistingData(firma, olcumKodu, baca) {
             console.log('1. Aşama verileri yüklendi:', result.data);
             console.log('Daha önce kaydedilmiş 1. Aşama verileri yüklendi!');
         } else {
-            console.log('1. Aşama için kaydedilmiş veri bulunamadı, form temizleniyor');
-            clearAsama1Form();
+            console.log('1. Aşama için kaydedilmiş veri bulunamadı');
         }
     })
     .catch(error => {
@@ -6175,7 +6115,7 @@ function renderAsama2Form(parameters) {
                     </div>
                     <div class="col-md-1-5 col-md-1-5-narrow">
                         <label class="form-label">Süre:</label>
-                        <input type="number" step="0.1" class="form-control" id="sure_${index}" onchange="calculateAyarlananSure(${index}); populateNozzleDropdown(${index}); saveAsama2Data()" oninput="saveAsama2Data()">
+                        <input type="number" step="0.1" class="form-control" id="sure_${index}" placeholder="0.0" onchange="calculateAyarlananSure(${index}); populateNozzleDropdown(${index}); saveAsama2Data()" oninput="saveAsama2Data()">
                     </div>
                     <div class="col-md-1-5 col-md-1-5-narrow">
                         <label class="form-label">Travers Sayısı:</label>
@@ -6183,7 +6123,7 @@ function renderAsama2Form(parameters) {
                     </div>
                     <div class="col-md-1-5 col-md-1-5-narrow">
                         <label class="form-label">Ayarlanan Süre:</label>
-                        <input type="number" step="0.1" class="form-control" id="ayarlananSure_${index}" readonly style="background-color: #f8f9fa;">
+                        <input type="number" step="0.1" class="form-control" id="ayarlananSure_${index}" placeholder="0.0" readonly style="background-color: #f8f9fa;">
                     </div>
                     <div class="col-md-1-5 col-md-1-5-extra-narrow">
                         <label class="form-label">1. Ölç. Bitiş:</label>
@@ -6214,11 +6154,11 @@ function renderAsama2Form(parameters) {
                     </div>
                     <div class="col-md-1-5 col-md-1-5-narrow">
                         <label class="form-label">Ort. Vakum Debi (l/d):</label>
-                        <input type="number" step="0.1" class="form-control" id="ortVakumDebi_${index}" onchange="saveAsama2Data()" oninput="saveAsama2Data()">
+                        <input type="number" step="0.1" class="form-control" id="ortVakumDebi_${index}" placeholder="0.0" onchange="saveAsama2Data()" oninput="saveAsama2Data()">
                     </div>
                     <div class="col-md-1-5 col-md-1-5-narrow">
                         <label class="form-label">Sayac Hacmi (l):</label>
-                        <input type="number" step="0.1" class="form-control" id="sayacHacmi_${index}" readonly style="background-color: #f8f9fa;">
+                        <input type="number" step="0.1" class="form-control" id="sayacHacmi_${index}" placeholder="0.0" readonly style="background-color: #f8f9fa;">
                         <small class="text-muted" id="sayacHacmiInfo_${index}"></small>
                     </div>
                 </div>
@@ -6771,212 +6711,17 @@ function continueShowAsama3Form() {
         // Sayfayı 3. Aşama formuna kaydır
         asama3Form.scrollIntoView({ behavior: 'smooth' });
         
-        // 3. Aşama içeriğini oluştur; tablolar hazır olunca onAsama3TablesReady tetiklenecek
+        // 3. Aşama içeriğini oluştur
         createAsama3Content();
+        // İçerik kurulduktan sonra otomatik hesapla ve ardından kilit durumunu uygula
+        requestAnimationFrame(() => {
+            try { if (typeof calculateAllExcelTables === 'function') calculateAllExcelTables(); } catch(e) { console.warn('Auto-calc failed:', e); }
+            requestAnimationFrame(() => { try { applyAsama3LockStateFromSession(); } catch(e) { console.warn('Apply lock failed:', e); } });
+        });
     } else {
         console.error('asama3Form elementi bulunamadı!');
         return;
     }
-}
-
-// 3. Aşama tabloları oluşturulduğunda çalışacak callback
-function onAsama3TablesReady() {
-    loadAsama3FromServer()
-        .catch((e) => {
-            console.warn('[onAsama3TablesReady] 3. Aşama verisi yüklenirken hata:', e);
-        })
-        .then(() => {
-            finalizeAsama3Init();
-        });
-}
-
-// 3. Aşama başlangıç işlemlerini (hesaplama + kilit durumu) uygular
-function finalizeAsama3Init() {
-    requestAnimationFrame(() => {
-        try {
-            if (typeof calculateAllExcelTables === 'function') {
-                calculateAllExcelTables();
-            }
-        } catch (e) {
-            console.warn('Auto-calc failed:', e);
-        }
-        requestAnimationFrame(() => {
-            try {
-                applyAsama3LockStateFromSession();
-            } catch (e) {
-                console.warn('Apply lock failed:', e);
-            }
-        });
-    });
-}
-
-// Backend'den 3. Aşama verilerini yükle ve tablolara uygula
-function loadAsama3FromServer() {
-    const firma = (document.getElementById('firmaSelect') || {}).value || '';
-    const olcumKodu = (document.getElementById('olcumKoduSelect') || {}).value || '';
-    const baca = (document.getElementById('bacaSelect') || {}).value || '';
-
-    if (!firma || !olcumKodu || !baca) {
-        console.warn('[loadAsama3FromServer] Firma/ölçüm/baca eksik, sunucudan 3. Aşama verisi alınmayacak');
-        return Promise.resolve();
-    }
-
-    const url = `/api/get_asama3_data?baca_no=${encodeURIComponent(baca)}&firma=${encodeURIComponent(firma)}&olcum_kodu=${encodeURIComponent(olcumKodu)}`;
-    console.log('[loadAsama3FromServer] 3. Aşama verisi yükleniyor...', url);
-
-    return fetch(url)
-        .then((response) => {
-            if (!response.ok) {
-                if (response.status === 404) {
-                    console.warn('[loadAsama3FromServer] 3. Aşama kaydı bulunamadı (404)');
-                    return null;
-                }
-                throw new Error(`HTTP ${response.status}`);
-            }
-            return response.json();
-        })
-        .then((result) => {
-            if (!result || !result.success || !result.data) {
-                console.warn('[loadAsama3FromServer] Sunucudan geçerli 3. Aşama verisi dönmedi');
-                return;
-            }
-
-            const asama3Data = result.data;
-            console.log('[loadAsama3FromServer] ✅ 3. Aşama verisi bulundu:', asama3Data);
-
-            // Local cache'e de yaz (4. Aşama vs. kullanıyor)
-            try {
-                if (window && window.sessionStorage) {
-                    window.sessionStorage.setItem('asama3Data', JSON.stringify(asama3Data));
-                }
-            } catch (e) {
-                console.warn('asama3Data sessionStorage\'a yazılamadı:', e);
-            }
-
-            if (!Array.isArray(asama3Data.parametreler)) {
-                return;
-            }
-
-            asama3Data.parametreler.forEach((param) => {
-                try {
-                    applyAsama3ParametreToTable(param);
-                } catch (e) {
-                    console.warn('[loadAsama3FromServer] Parametre uygulanırken hata:', e);
-                }
-            });
-
-            // Kilit bilgisini uygula (varsa)
-            let locked = false;
-            if (typeof asama3Data.locked !== 'undefined') {
-                const v = asama3Data.locked;
-                locked = (v === true || v === 1 || v === '1' || v === 'true');
-                try {
-                    window.sessionStorage.setItem('asama3Locked', locked ? '1' : '0');
-                } catch (e) {
-                    console.warn('asama3Locked sessionStorage\'a yazılamadı:', e);
-                }
-                setAsama3Locked(locked);
-            }
-        })
-        .catch((error) => {
-            console.warn('[loadAsama3FromServer] Hata:', error);
-            throw error;
-        });
-}
-
-// Tek bir parametre kaydını ilgili 3. Aşama tablosuna uygula
-function applyAsama3ParametreToTable(paramData) {
-    if (!paramData) {
-        return;
-    }
-
-    const paramName = (paramData.parametre || '').toString().trim();
-    if (!paramName) {
-        return;
-    }
-
-    // Doğru kartı/tabloları bulmak için data-parametre-name attribute'unu kullan
-    const cards = document.querySelectorAll('#asama3Content .card');
-    let tableIndex = -1;
-
-    cards.forEach((card, idx) => {
-        if (tableIndex !== -1) {
-            return;
-        }
-
-        const dataName = (card.getAttribute('data-parametre-name') || '').toString().trim();
-        if (!dataName) {
-            return;
-        }
-
-        if (dataName.toUpperCase() === paramName.toUpperCase()) {
-            tableIndex = idx;
-        }
-    });
-
-    if (tableIndex === -1) {
-        console.warn('[applyAsama3ParametreToTable] Uygun tablo bulunamadı:', paramName);
-        return;
-    }
-
-    const tbody = document.getElementById(`excelBody_${tableIndex}`);
-    if (!tbody) {
-        console.warn('[applyAsama3ParametreToTable] Tbody bulunamadı: excelBody_', tableIndex);
-        return;
-    }
-
-    const rows = tbody.querySelectorAll('tr');
-    const hesaplamalar = Array.isArray(paramData.hesaplamalar) ? paramData.hesaplamalar : [];
-
-    hesaplamalar.forEach((hesaplama) => {
-        const sira = parseInt(hesaplama.sira || 0, 10);
-        if (!sira || sira < 1 || sira > rows.length) {
-            return;
-        }
-
-        const row = rows[sira - 1];
-        if (!row) {
-            return;
-        }
-
-        const degerler = hesaplama.degerler || {};
-        const inputs = row.querySelectorAll('input');
-
-        inputs.forEach((input) => {
-            const name = input.name || '';
-            let cellIndex = -1;
-
-            if (name.includes('baslangic_')) cellIndex = 2;
-            else if (name.includes('ayarlananSure_')) cellIndex = 3;
-            else if (name.includes('nozzleCapi_')) cellIndex = 4;
-            else if (name.includes('sure_') && !name.includes('ayarlanan')) cellIndex = 5;
-            else if (name.includes('izokinVerimi_')) cellIndex = 6;
-            else if (name.includes('ortBacaHizi_')) cellIndex = 7;
-            else if (name.includes('bacaSicakligi_')) cellIndex = 8;
-            else if (name.includes('bacaMutlkBas_')) cellIndex = 9;
-            else if (name.includes('bacaTeorikHacim_')) cellIndex = 10;
-            else if (name.includes('bacaNHacim_')) cellIndex = 11;
-            else if (name.includes('sayacHacim_')) cellIndex = 12;
-            else if (name.includes('sayacNHacim_')) cellIndex = 13;
-            else if (name.includes('sayacLD_')) cellIndex = 14;
-            else if (name.includes('sayacNLD_')) cellIndex = 15;
-            else if (name.includes('sayacSic_')) cellIndex = 16;
-            else if (name.includes('sayacGaz_')) cellIndex = 17;
-            else if (name.includes('atmosferBasnc_')) cellIndex = 18;
-            else if (name.includes('cihazSeri_')) cellIndex = 19;
-            else if (name.includes('pitotDP_')) cellIndex = 20;
-            else if (name.includes('traversSayisi_')) cellIndex = 21;
-            else if (name.includes('pitotKatsayi_')) cellIndex = 22;
-            else if (name.includes('nem_')) cellIndex = 23;
-
-            if (cellIndex >= 0) {
-                const key = `deger_${cellIndex}`;
-                if (Object.prototype.hasOwnProperty.call(degerler, key)) {
-                    input.value = degerler[key] || '';
-                }
-            }
-        });
-    });
 }
 
 // 3. Aşama içeriğini oluştur
@@ -7116,15 +6861,6 @@ function createAsama3Content() {
             const traversSayisi = document.getElementById(`traversSayisi_${index}`).value || 1;
             populateExcelTable(index, traversSayisi);
         });
-
-        // Tablolar hazır olduğunda 3. Aşama verilerini yükle ve başlat
-        try {
-            if (typeof onAsama3TablesReady === 'function') {
-                onAsama3TablesReady();
-            }
-        } catch (e) {
-            console.warn('onAsama3TablesReady çağrısı sırasında hata:', e);
-        }
     }, 100);
 }
 
@@ -7582,26 +7318,26 @@ function populateExcelTable(tableIndex, traversCount) {
                 <td>${traversNo}</td>
                 <td><input type="text" class="form-control form-control-sm" placeholder="gg/aa/yy ss:dd" name="baslangic_${olcumNo}_${traversNo}" value="${baslangicValue}"></td>
                 <td><input type="text" class="form-control form-control-sm" placeholder="mm:ss" name="ayarlananSure_${olcumNo}_${traversNo}" value="${ayarlananSureFormatted}"></td>
-                <td><input type="number" class="form-control form-control-sm" step="0.1" name="nozzleCapi_${olcumNo}_${traversNo}" value="${nozzleCapi}"></td>
+                <td><input type="number" class="form-control form-control-sm" step="0.1" placeholder="0.0" name="nozzleCapi_${olcumNo}_${traversNo}" value="${nozzleCapi}"></td>
                 <td><input type="text" class="form-control form-control-sm" placeholder="mm:ss" name="sure_${olcumNo}_${traversNo}"></td>
                 <td><input type="number" class="form-control form-control-sm" step="0.01" placeholder="0.00" name="izokinVerimi_${olcumNo}_${traversNo}" value="${izokineticVerimi}"></td>
-                <td><input type="number" class="form-control form-control-sm" step="0.1" name="ortBacaHizi_${olcumNo}_${traversNo}" value="${bacaHizi}"></td>
-                <td><input type="number" class="form-control form-control-sm" step="0.1" name="bacaSicakligi_${olcumNo}_${traversNo}" value="${bacaSicakligi}"></td>
-                <td><input type="number" class="form-control form-control-sm" step="0.1" name="bacaMutlkBas_${olcumNo}_${traversNo}" value="${bacaMutlkBas}"></td>
-                <td><input type="number" class="form-control form-control-sm" step="0.1" name="bacaTeorikHacim_${olcumNo}_${traversNo}"></td>
-                <td><input type="number" class="form-control form-control-sm" step="0.1" name="bacaNHacim_${olcumNo}_${traversNo}"></td>
-                <td><input type="number" class="form-control form-control-sm" step="0.1" name="sayacHacim_${olcumNo}_${traversNo}"></td>
-                <td><input type="number" class="form-control form-control-sm" step="0.1" name="sayacNHacim_${olcumNo}_${traversNo}"></td>
-                <td><input type="number" class="form-control form-control-sm" step="0.1" name="sayacLD_${olcumNo}_${traversNo}"></td>
-                <td><input type="number" class="form-control form-control-sm" step="0.1" name="sayacNLD_${olcumNo}_${traversNo}"></td>
-                <td><input type="number" class="form-control form-control-sm" step="0.1" name="sayacSic_${olcumNo}_${traversNo}" value="${sayacSic}"></td>
-                <td><input type="number" class="form-control form-control-sm" step="0.1" name="sayacGaz_${olcumNo}_${traversNo}"></td>
-                <td><input type="number" class="form-control form-control-sm" step="0.1" name="atmosferBasnc_${olcumNo}_${traversNo}" value="${atmosferBasnc}"></td>
+                <td><input type="number" class="form-control form-control-sm" step="0.1" placeholder="0.0" name="ortBacaHizi_${olcumNo}_${traversNo}" value="${bacaHizi}"></td>
+                <td><input type="number" class="form-control form-control-sm" step="0.1" placeholder="0.0" name="bacaSicakligi_${olcumNo}_${traversNo}" value="${bacaSicakligi}"></td>
+                <td><input type="number" class="form-control form-control-sm" step="0.1" placeholder="0.0" name="bacaMutlkBas_${olcumNo}_${traversNo}" value="${bacaMutlkBas}"></td>
+                <td><input type="number" class="form-control form-control-sm" step="0.1" placeholder="0.0" name="bacaTeorikHacim_${olcumNo}_${traversNo}"></td>
+                <td><input type="number" class="form-control form-control-sm" step="0.1" placeholder="0.0" name="bacaNHacim_${olcumNo}_${traversNo}"></td>
+                <td><input type="number" class="form-control form-control-sm" step="0.1" placeholder="0.0" name="sayacHacim_${olcumNo}_${traversNo}"></td>
+                <td><input type="number" class="form-control form-control-sm" step="0.1" placeholder="0.0" name="sayacNHacim_${olcumNo}_${traversNo}"></td>
+                <td><input type="number" class="form-control form-control-sm" step="0.1" placeholder="0.0" name="sayacLD_${olcumNo}_${traversNo}"></td>
+                <td><input type="number" class="form-control form-control-sm" step="0.1" placeholder="0.0" name="sayacNLD_${olcumNo}_${traversNo}"></td>
+                <td><input type="number" class="form-control form-control-sm" step="0.1" placeholder="0.0" name="sayacSic_${olcumNo}_${traversNo}" value="${sayacSic}"></td>
+                <td><input type="number" class="form-control form-control-sm" step="0.1" placeholder="0.0" name="sayacGaz_${olcumNo}_${traversNo}"></td>
+                <td><input type="number" class="form-control form-control-sm" step="0.1" placeholder="0.0" name="atmosferBasnc_${olcumNo}_${traversNo}" value="${atmosferBasnc}"></td>
                 <td><input type="text" class="form-control form-control-sm" placeholder="Seri No" name="cihazSeri_${olcumNo}_${traversNo}" value="${cihazSeri}"></td>
-                <td><input type="number" class="form-control form-control-sm" step="0.1" name="pitotDP_${olcumNo}_${traversNo}"></td>
+                <td><input type="number" class="form-control form-control-sm" step="0.1" placeholder="0.0" name="pitotDP_${olcumNo}_${traversNo}"></td>
                 <td><input type="number" class="form-control form-control-sm" step="1" placeholder="0" name="traversSayisi_${olcumNo}_${traversNo}"></td>
                 <td><input type="number" class="form-control form-control-sm" step="0.01" placeholder="0.00" name="pitotKatsayi_${olcumNo}_${traversNo}" value="${pitotKatsayi}"></td>
-                <td><input type="number" class="form-control form-control-sm" step="0.1" name="nem_${olcumNo}_${traversNo}" value="${nem}"></td>
+                <td><input type="number" class="form-control form-control-sm" step="0.1" placeholder="0.0" name="nem_${olcumNo}_${traversNo}" value="${nem}"></td>
             `;
             tbody.appendChild(row);
             rowNumber++;
@@ -7806,26 +7542,26 @@ function addRowToExcelTable(tableIndex) {
         <td>${rowCount}</td>
         <td><input type="text" class="form-control form-control-sm" placeholder="ss:dd"></td>
         <td><input type="text" class="form-control form-control-sm" placeholder="mm:ss" value="${ayarlananSureFormatted}"></td>
-        <td><input type="number" class="form-control form-control-sm" step="0.1"></td>
-        <td><input type="number" class="form-control form-control-sm" step="0.1"></td>
+        <td><input type="number" class="form-control form-control-sm" step="0.1" placeholder="0.0"></td>
+        <td><input type="number" class="form-control form-control-sm" step="0.1" placeholder="0.0"></td>
         <td><input type="number" class="form-control form-control-sm" step="0.01" placeholder="0.00" value="${izokineticVerimi}"></td>
-        <td><input type="number" class="form-control form-control-sm" step="0.1"></td>
-        <td><input type="number" class="form-control form-control-sm" step="0.1" name="bacaSicakligi_new_${rowCount}" value="${bacaSicakligi}"></td>
-        <td><input type="number" class="form-control form-control-sm" step="0.1"></td>
-        <td><input type="number" class="form-control form-control-sm" step="0.1"></td>
-        <td><input type="number" class="form-control form-control-sm" step="0.1"></td>
-        <td><input type="number" class="form-control form-control-sm" step="0.1"></td>
-        <td><input type="number" class="form-control form-control-sm" step="0.1"></td>
-        <td><input type="number" class="form-control form-control-sm" step="0.1"></td>
-        <td><input type="number" class="form-control form-control-sm" step="0.1"></td>
-        <td><input type="number" class="form-control form-control-sm" step="0.1"></td>
+        <td><input type="number" class="form-control form-control-sm" step="0.1" placeholder="0.0"></td>
+        <td><input type="number" class="form-control form-control-sm" step="0.1" placeholder="0.0" name="bacaSicakligi_new_${rowCount}" value="${bacaSicakligi}"></td>
+        <td><input type="number" class="form-control form-control-sm" step="0.1" placeholder="0.0"></td>
+        <td><input type="number" class="form-control form-control-sm" step="0.1" placeholder="0.0"></td>
+        <td><input type="number" class="form-control form-control-sm" step="0.1" placeholder="0.0"></td>
+        <td><input type="number" class="form-control form-control-sm" step="0.1" placeholder="0.0"></td>
+        <td><input type="number" class="form-control form-control-sm" step="0.1" placeholder="0.0"></td>
+        <td><input type="number" class="form-control form-control-sm" step="0.1" placeholder="0.0"></td>
+        <td><input type="number" class="form-control form-control-sm" step="0.1" placeholder="0.0"></td>
+        <td><input type="number" class="form-control form-control-sm" step="0.1" placeholder="0.0"></td>
         <td><input type="number" class="form-control form-control-sm" step="0.1" placeholder="0.0"></td>
         <td><input type="number" class="form-control form-control-sm" step="0.1" placeholder="0.0"></td>
         <td><input type="text" class="form-control form-control-sm" placeholder="Seri No" value="${cihazSeri}"></td>
         <td><input type="number" class="form-control form-control-sm" step="0.1" placeholder="0.0"></td>
         <td><input type="number" class="form-control form-control-sm" step="1" placeholder="0"></td>
         <td><input type="number" class="form-control form-control-sm" step="0.01" placeholder="0.00" value="${pitotKatsayi}"></td>
-        <td><input type="number" class="form-control form-control-sm" step="0.1" value="${nem}"></td>
+        <td><input type="number" class="form-control form-control-sm" step="0.1" placeholder="0.0" value="${nem}"></td>
     `;
     tbody.appendChild(row);
 }
@@ -8899,91 +8635,6 @@ function calculateAllExcelTables() {
     });
 }
 
-// 3. Aşama Excel tablolarını CSV formatında dışa aktar
-function exportAsama3TablesToExcel() {
-    try {
-        const cards = document.querySelectorAll('#asama3Content .card');
-        if (!cards.length) {
-            alert('Dışa aktarılacak hesaplama tablosu bulunamadı.');
-            return;
-        }
-
-        const lines = [];
-
-        cards.forEach((card, tableIndex) => {
-            const table = card.querySelector('table');
-            if (!table) return;
-
-            const titleEl = card.querySelector('.card-header h6');
-            const title = titleEl ? titleEl.textContent.trim().replace(/\s+/g, ' ') : `Tablo ${tableIndex + 1}`;
-
-            // Tablo başlığı satırı
-            lines.push(`"${title}"`);
-
-            // Thead
-            const thead = table.querySelector('thead');
-            if (thead) {
-                const headerCells = thead.querySelectorAll('tr:last-child th');
-                if (headerCells.length) {
-                    const headerRow = Array.from(headerCells).map(th => {
-                        const text = (th.textContent || '').trim().replace(/"/g, '""');
-                        return `"${text}"`;
-                    }).join(';');
-                    lines.push(headerRow);
-                }
-            }
-
-            // Tbody
-            const tbody = table.querySelector('tbody');
-            if (tbody) {
-                tbody.querySelectorAll('tr').forEach(tr => {
-                    const cells = Array.from(tr.children).map(td => {
-                        let value = '';
-                        const input = td.querySelector('input, select, textarea');
-                        if (input) {
-                            value = (input.value || '').toString();
-                        } else {
-                            value = (td.textContent || '').toString();
-                        }
-                        value = value.trim().replace(/"/g, '""');
-                        return `"${value}"`;
-                    });
-                    if (cells.length) {
-                        lines.push(cells.join(';'));
-                    }
-                });
-            }
-
-            // Tablolar arasında boş satır
-            lines.push('');
-        });
-
-        if (!lines.length) {
-            alert('Dışa aktarılacak veri bulunamadı.');
-            return;
-        }
-
-        const csvContent = lines.join('\r\n');
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-
-        const now = new Date();
-        const dateStr = now.toISOString().split('T')[0];
-        const fileName = `asama3_hesaplamalar_${dateStr}.csv`;
-
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    } catch (err) {
-        console.error('[exportAsama3TablesToExcel] Hata:', err);
-        alert('Excele aktarma sırasında bir hata oluştu.');
-    }
-}
-
 // Başlangıç tarihlerini yeniden hesapla (J sütunu değeri dahil)
 function recalculateBaslangicDates(tableIndex) {
     console.log(`[recalculateBaslangicDates] Tablo ${tableIndex} için başlangıç tarihleri yeniden hesaplanıyor...`);
@@ -9693,8 +9344,8 @@ function goToAsama4FromSelection() {
     const personel = document.getElementById('personelSelect').value;
     const parametre = document.getElementById('parametreSelect').value;
     
-    if (!firma || !olcumKodu || !baca) {
-        alert('Lütfen firma, ölçüm kodu ve bacayı seçin!');
+    if (!firma || !olcumKodu || !baca || !personel) {
+        alert('Lütfen firma, ölçüm kodu, baca ve personel seçin!');
         return;
     }
     
@@ -10363,7 +10014,7 @@ function setAsama3Locked(locked) {
 
     const btnH = document.getElementById('btnHesaplaAsama3');
     const btnA = document.getElementById('btnAddRowAsama3');
-    // Hesapla butonu kilitliyken de tıklanabilir kalsın (şifre isteyecek)
+    if (btnH) btnH.disabled = !!locked;
     if (btnA) btnA.disabled = !!locked;
 
     const btnK = document.getElementById('btnKilitleAsama3');
@@ -10386,65 +10037,23 @@ function applyAsama3LockStateFromSession() {
     setAsama3Locked(s === '1');
 }
 
-function ensureAsama3EditPermission() {
-    // Kilitli verileri düzenlemek için şifre sor
-    const pwd = prompt('Düzenleme şifresi (varsayılan: 1)');
-    if (pwd === null) {
-        return false; // Vazgeçildi
-    }
-    if (pwd !== '1') {
-        alert('Hatalı şifre, düzenleme yapılamaz.');
-        return false;
-    }
-
-    // Kilidi kaldır
-    setAsama3Locked(false);
-    try {
-        window.sessionStorage.setItem('asama3Locked', '0');
-    } catch (e) {}
-    return true;
-}
-
-// Hesapla butonu tıklandığında çalışır
-function onClickHesaplaAsama3() {
-    if (window.asama3Locked) {
-        // Önce düzenleme iznini al (şifre kontrolü)
-        if (!ensureAsama3EditPermission()) {
-            return;
-        }
-    }
-
-    if (typeof calculateAllExcelTables === 'function') {
-        calculateAllExcelTables();
-    }
-}
-
 function toggleAsama3Lock() {
     const next = !window.asama3Locked;
+    if (next) {
+        // Kilitleme öncesi hesapla ve kaydet
+        try {
+            if (typeof calculateAllExcelTables === 'function') {
+                console.log('[Kilitle] Hesaplama başlatılıyor...');
+                calculateAllExcelTables();
+            }
+        } catch (e) { console.error('[Kilitle] Hesaplama hatası:', e); }
 
-    if (!next) {
-        // Kilidi açmak için şifre iste
-        if (!ensureAsama3EditPermission()) {
-            return;
-        }
-        return;
+        try {
+            console.log('[Kilitle] Kaydetme başlatılıyor...');
+            saveAsama3();
+        } catch (e) { console.error('[Kilitle] Kaydetme hatası:', e); }
     }
-
-    // Kilitleme öncesi hesapla ve kaydet
-    try {
-        if (typeof calculateAllExcelTables === 'function') {
-            console.log('[Kilitle] Hesaplama başlatılıyor...');
-            calculateAllExcelTables();
-        }
-    } catch (e) { console.error('[Kilitle] Hesaplama hatası:', e); }
-
-    // Kilit bayrağını ayarla ve kaydet
-    setAsama3Locked(true);
-
-    try {
-        console.log('[Kilitle] Kaydetme başlatılıyor...');
-        saveAsama3();
-    } catch (e) { console.error('[Kilitle] Kaydetme hatası:', e); }
+    setAsama3Locked(next);
 }
 
 // 3. Aşamayı kaydet
@@ -10459,14 +10068,12 @@ function saveAsama3() {
         
         console.log('Form değerleri:', { firma, olcumKodu, baca, personel });
     
-        const lockedFlag = window.asama3Locked ? 1 : 0;
         const asama3Data = {
             firma: firma,
             olcumKodu: olcumKodu,
             baca: baca,
             personel: personel,
             asama: 3,
-            locked: lockedFlag,
             parametreler: []
         };
         
