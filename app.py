@@ -123,7 +123,7 @@ def ensure_data_files():
         # İç içe import ile global import tekrarlarını önle
         import shutil
         base_files = [
-            'users.json', 'parameters.json',
+            'users.json', 'parameters.json', 'excel_data.json',
             'firma_olcum.json', 'firma_kayit.json', 'saha_olc.json', 'baca_bilgileri.json',
             'parametre_olcum.json', # 'teklif.json', 'used_teklif_numbers.json' silindi
             'parametre_sahabil.json', 'forms.json', 'parametre_fields.json', 'baca_paralar.json',
