@@ -16,10 +16,10 @@
         "sayacHacmi": "814.3",
         "ortVakumDebi": "17",
         "olcum1Bitis": "01/12/25 15:06",
-        "olcum2Baslangic": "01/12/25 15:13",
-        "olcum2Bitis": "01/12/25 16:01",
-        "olcum3Baslangic": "01/12/25 16:13",
-        "olcum3Bitis": "01/12/25 17:01"
+        "olcum2Baslangic": "01/12/25 15:15",
+        "olcum2Bitis": "01/12/25 16:03",
+        "olcum3Baslangic": "01/12/25 16:12",
+        "olcum3Bitis": "01/12/25 17:00"
       },
       {
         "parametre": "SÜLFÜRİK ASİT\n                \n                    \n                    Hız: 10 m/s | Sıcaklık: 80 °C | Basınç: 101.3 kPa | Nem: 4% | Atmosfer: 101.1 kPa | Seri: M5PMA- 1710",
@@ -31,10 +31,10 @@
         "sayacHacmi": "1108.4",
         "ortVakumDebi": "23.1",
         "olcum1Bitis": "02/12/25 18:06",
-        "olcum2Baslangic": "02/12/25 18:15",
-        "olcum2Bitis": "02/12/25 19:03",
-        "olcum3Baslangic": "02/12/25 19:15",
-        "olcum3Bitis": "02/12/25 20:03"
+        "olcum2Baslangic": "02/12/25 18:17",
+        "olcum2Bitis": "02/12/25 19:05",
+        "olcum3Baslangic": "02/12/25 19:14",
+        "olcum3Bitis": "02/12/25 20:02"
       },
       {
         "parametre": "Toz_EPA5\n                \n                    \n                    Hız: 10 m/s | Sıcaklık: 80 °C | Basınç: 101.3 kPa | Nem: 4% | Atmosfer: 101.1 kPa | Seri: M5PMA- 1710",
@@ -46,12 +46,12 @@
         "sayacHacmi": "1447.6",
         "ortVakumDebi": "30.2",
         "olcum1Bitis": "03/12/25 08:06",
-        "olcum2Baslangic": "03/12/25 08:13",
-        "olcum2Bitis": "03/12/25 09:01",
-        "olcum3Baslangic": "03/12/25 09:09",
-        "olcum3Bitis": "03/12/25 09:57"
+        "olcum2Baslangic": "03/12/25 08:16",
+        "olcum2Bitis": "03/12/25 09:04",
+        "olcum3Baslangic": "03/12/25 09:14",
+        "olcum3Bitis": "03/12/25 10:02"
       }
     ],
-    "kayit_tarihi": "2025-12-12 14:32:17"
+    "kayit_tarihi": "2025-12-12 16:22:34"
   }
 ]
