@@ -101,6 +101,29 @@
         background-color: #e3f2fd !important;
     }
 
+    #excelTable td.excel-selected {
+        background-color: rgba(13, 110, 253, 0.12) !important;
+    }
+
+    #excelTable td.excel-active {
+        outline: 2px solid #0d6efd;
+        background-color: rgba(255, 193, 7, 0.25) !important;
+    }
+
+    #excelTable th {
+        user-select: none;
+    }
+
+    #excelTable th .excel-col-resizer {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 6px;
+        height: 100%;
+        cursor: col-resize;
+        z-index: 5;
+    }
+
     .rapor-table-wrapper {
         max-height: 70vh;
         overflow: auto;

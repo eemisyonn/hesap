@@ -7,7 +7,7 @@
     "asama": 2,
     "parametreler": [
       {
-        "parametre": "AĞIR MET_EPA 29\n                \n                    \n                    Hız: 10 m/s | Sıcaklık: 80 °C | Basınç: 101.3 kPa | Nem: 4% | Atmosfer: 101.1 kPa | Seri: M5PMA- 1710",
+        "parametre": "SÜLFÜRİK ASİT\n                \n                    \n                    Hız: 10 m/s | Sıcaklık: 80 °C | Basınç: 101.3 kPa | Nem: 4% | Atmosfer: 101.1 kPa | Seri: M5PMA- 1710",
         "baslangic": "01/12/25 14:18",
         "ayarlananSure": "2880.0",
         "traversSayisi": "24",
@@ -16,13 +16,13 @@
         "sayacHacmi": "814.3",
         "ortVakumDebi": "17",
         "olcum1Bitis": "01/12/25 15:06",
-        "olcum2Baslangic": "01/12/25 15:15",
-        "olcum2Bitis": "01/12/25 16:03",
-        "olcum3Baslangic": "01/12/25 16:12",
-        "olcum3Bitis": "01/12/25 17:00"
+        "olcum2Baslangic": "01/12/25 15:17",
+        "olcum2Bitis": "01/12/25 16:05",
+        "olcum3Baslangic": "01/12/25 16:17",
+        "olcum3Bitis": "01/12/25 17:05"
       },
       {
-        "parametre": "SÜLFÜRİK ASİT\n                \n                    \n                    Hız: 10 m/s | Sıcaklık: 80 °C | Basınç: 101.3 kPa | Nem: 4% | Atmosfer: 101.1 kPa | Seri: M5PMA- 1710",
+        "parametre": "Toz_EPA5\n                \n                    \n                    Hız: 10 m/s | Sıcaklık: 80 °C | Basınç: 101.3 kPa | Nem: 4% | Atmosfer: 101.1 kPa | Seri: M5PMA- 1710",
         "baslangic": "02/12/25 17:18",
         "ayarlananSure": "2880.0",
         "traversSayisi": "12",
@@ -31,13 +31,13 @@
         "sayacHacmi": "1108.4",
         "ortVakumDebi": "23.1",
         "olcum1Bitis": "02/12/25 18:06",
-        "olcum2Baslangic": "02/12/25 18:17",
-        "olcum2Bitis": "02/12/25 19:05",
+        "olcum2Baslangic": "02/12/25 18:16",
+        "olcum2Bitis": "02/12/25 19:04",
         "olcum3Baslangic": "02/12/25 19:14",
         "olcum3Bitis": "02/12/25 20:02"
       },
       {
-        "parametre": "Toz_EPA5\n                \n                    \n                    Hız: 10 m/s | Sıcaklık: 80 °C | Basınç: 101.3 kPa | Nem: 4% | Atmosfer: 101.1 kPa | Seri: M5PMA- 1710",
+        "parametre": "AĞIR MET_EPA 29\n                \n                    \n                    Hız: 10 m/s | Sıcaklık: 80 °C | Basınç: 101.3 kPa | Nem: 4% | Atmosfer: 101.1 kPa | Seri: M5PMA- 1710",
         "baslangic": "03/12/25 07:18",
         "ayarlananSure": "2880.0",
         "traversSayisi": "6",
@@ -46,12 +46,12 @@
         "sayacHacmi": "1447.6",
         "ortVakumDebi": "30.2",
         "olcum1Bitis": "03/12/25 08:06",
-        "olcum2Baslangic": "03/12/25 08:16",
-        "olcum2Bitis": "03/12/25 09:04",
+        "olcum2Baslangic": "03/12/25 08:15",
+        "olcum2Bitis": "03/12/25 09:03",
         "olcum3Baslangic": "03/12/25 09:14",
         "olcum3Bitis": "03/12/25 10:02"
       }
     ],
-    "kayit_tarihi": "2025-12-12 16:22:34"
+    "kayit_tarihi": "2026-01-08 01:31:58"
   }
 ]

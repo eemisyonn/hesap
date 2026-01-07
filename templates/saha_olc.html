@@ -852,10 +852,11 @@ function bulkDeleteSahaOlcum() {
             return;
         }
 
-        // Tablo satırlarını kaldır
-        ids.forEach(id => {
-            const row = document.querySelector(`#sahaOlcumTable tr[data-id="${id}"]`);
-            if (row) row.remove();
+        // Tablo satırlarını kaldır (seçili satırları kaldırmak en güvenlisi)
+        const checked = document.querySelectorAll('#sahaOlcumTable .saha-row-select:checked');
+        checked.forEach(cb => {
+            const tr = cb.closest('tr');
+            if (tr) tr.remove();
         });
 
         updateSahaSelectionUI();
@@ -4392,12 +4393,23 @@ function deleteSahaOlcum(id) {
         return;
     }
 
+    // Satır üzerinde gerçek id listesi varsa onu kullan (data-ids)
+    const row = document.querySelector(`#sahaOlcumTable tr[data-id="${id}"]`);
+    let ids = [id];
+    if (row) {
+        const idsAttr = row.getAttribute('data-ids') || '';
+        const parsedIds = idsAttr.split(',').map(s => (s || '').trim()).filter(Boolean);
+        if (parsedIds.length) {
+            ids = parsedIds;
+        }
+    }
+
     fetch('/api/saha_olcumleri/bulk_delete', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ ids: [id] })
+        body: JSON.stringify({ ids })
     })
     .then(response => response.json())
     .then(result => {
@@ -4406,7 +4418,6 @@ function deleteSahaOlcum(id) {
             return;
         }
 
-        const row = document.querySelector(`#sahaOlcumTable tr[data-id="${id}"]`);
         if (row) {
             row.remove();
         }
@@ -5897,7 +5908,8 @@ function showAsama2Form() {
     }
     
     // Baca numarasını al
-    const baca = document.getElementById('bacaSelect').value;
+    const bacaSelect = document.getElementById('bacaSelect');
+    const baca = bacaSelect ? bacaSelect.value : '';
     console.log('Seçilen baca:', baca);
     
     if (baca) {
@@ -6149,12 +6161,18 @@ function renderAsama2Form(parameters) {
         const parametreDiv = document.createElement('div');
         parametreDiv.className = 'card mb-3';
         // 1. Aşamadan tüm bilgileri al
-        const bacaHizi = parseFloat(document.getElementById('ortBacaHizi').value) || 0;
-        const bacaSicakligi = parseFloat(document.getElementById('bacaSicakligi').value) || 0;
-        const bacaMutlakBasinc = parseFloat(document.getElementById('bacaMutlakBasinc').value) || 0;
-        const nem = parseFloat(document.getElementById('nem').value) || 0;
-        const atmosferBasinc = parseFloat(document.getElementById('atmosferBasinci').value) || 0;
-        const cihazSeri = document.getElementById('cihazSeri').value || '';
+        const bacaHiziEl = document.getElementById('ortBacaHizi');
+        const bacaSicakligiEl = document.getElementById('bacaSicakligi');
+        const bacaMutlakBasincEl = document.getElementById('bacaMutlakBasinc');
+        const nemEl = document.getElementById('nem');
+        const atmosferBasincEl = document.getElementById('atmosferBasinci');
+        const cihazSeriEl = document.getElementById('cihazSeri');
+        const bacaHizi = parseFloat(bacaHiziEl ? bacaHiziEl.value : '') || 0;
+        const bacaSicakligi = parseFloat(bacaSicakligiEl ? bacaSicakligiEl.value : '') || 0;
+        const bacaMutlakBasinc = parseFloat(bacaMutlakBasincEl ? bacaMutlakBasincEl.value : '') || 0;
+        const nem = parseFloat(nemEl ? nemEl.value : '') || 0;
+        const atmosferBasinc = parseFloat(atmosferBasincEl ? atmosferBasincEl.value : '') || 0;
+        const cihazSeri = cihazSeriEl ? (cihazSeriEl.value || '') : '';
         
         parametreDiv.innerHTML = `
             <div class="card-header bg-light">
@@ -6241,12 +6259,18 @@ function renderAsama2Form(parameters) {
 // Parametre başlığını güncelle (baca bilgileri ile)
 function updateParametreHeader(index, parametre) {
     // 1. Aşamadan tüm bilgileri al
-    const bacaHizi = parseFloat(document.getElementById('ortBacaHizi').value) || 0;
-    const bacaSicakligi = parseFloat(document.getElementById('bacaSicakligi').value) || 0;
-    const bacaMutlakBasinc = parseFloat(document.getElementById('bacaMutlakBasinc').value) || 0;
-    const nem = parseFloat(document.getElementById('nem').value) || 0;
-    const atmosferBasinc = parseFloat(document.getElementById('atmosferBasinci').value) || 0;
-    const cihazSeri = document.getElementById('cihazSeri').value || '';
+    const bacaHiziEl = document.getElementById('ortBacaHizi');
+    const bacaSicakligiEl = document.getElementById('bacaSicakligi');
+    const bacaMutlakBasincEl = document.getElementById('bacaMutlakBasinc');
+    const nemEl = document.getElementById('nem');
+    const atmosferBasincEl = document.getElementById('atmosferBasinci');
+    const cihazSeriEl = document.getElementById('cihazSeri');
+    const bacaHizi = parseFloat(bacaHiziEl ? bacaHiziEl.value : '') || 0;
+    const bacaSicakligi = parseFloat(bacaSicakligiEl ? bacaSicakligiEl.value : '') || 0;
+    const bacaMutlakBasinc = parseFloat(bacaMutlakBasincEl ? bacaMutlakBasincEl.value : '') || 0;
+    const nem = parseFloat(nemEl ? nemEl.value : '') || 0;
+    const atmosferBasinc = parseFloat(atmosferBasincEl ? atmosferBasincEl.value : '') || 0;
+    const cihazSeri = cihazSeriEl ? (cihazSeriEl.value || '') : '';
     
     console.log(`Baca bilgileri kontrol ediliyor: Hız=${bacaHizi}, Sıcaklık=${bacaSicakligi}, Basınç=${bacaMutlakBasinc}, Nem=${nem}`);
     
@@ -7450,10 +7474,21 @@ function populateExcelTable(tableIndex, traversCount) {
             }
             
             // Her travers için yeni bir çarpan üret
-            const basinciCarpan = parseFloat(getBacaBasinciCarpanFromParametre(parametreName)) || 1.0;
-            const bacaMutlkBas = baseBacaBasinci > 0 ? (baseBacaBasinci * basinciCarpan).toFixed(2) : '0.00';
-            console.log(`[Baca Basıncı] Travers ${olcumNo}-${traversNo}: Base=${baseBacaBasinci}, Çarpan=${basinciCarpan}, Sonuç=${bacaMutlkBas}`);
-            
+            const basRange = getBacaBasinciCarpanRangeFromParametre(parametreName);
+            let bacaMutlkBas = '0.00';
+            if (baseBacaBasinci > 0) {
+                const base = Number(baseBacaBasinci);
+                let minC = 0.9995;
+                let maxC = 1.0005;
+                if (basRange && Number.isFinite(basRange.min) && Number.isFinite(basRange.max)) {
+                    minC = basRange.min;
+                    maxC = basRange.max;
+                }
+                const carpan = (Math.random() * (maxC - minC) + minC);
+                bacaMutlkBas = (base * carpan).toFixed(2);
+            }
+            console.log(`[Baca Basıncı] Travers ${olcumNo}-${traversNo}: Base=${baseBacaBasinci}, Sonuç=${bacaMutlkBas}`);
+
             // Sayaç Sıcaklığı - 1. Aşamadaki sayaç gaz sıcaklığı × parametre çarpanı (row[7] - Hata Say. Sıc.)
             let baseSayacSicakligi = 0;
             
@@ -8016,11 +8051,21 @@ function calculateExcelTable(tableIndex) {
     console.log(`[Baca Basıncı] Bulunan input sayısı=${bacaMutlkBasInputs.length}`);
     
     bacaMutlkBasInputs.forEach((input, index) => {
-        // Her travers için yeni bir çarpan üret
-        const basinciCarpan = parseFloat(getBacaBasinciCarpanFromParametre(parametreName)) || 1.0;
-        const val = baseBacaBasinci > 0 ? (baseBacaBasinci * basinciCarpan).toFixed(2) : '0.00';
+        const basRange = getBacaBasinciCarpanRangeFromParametre(parametreName);
+        let val = '0.00';
+        if (baseBacaBasinci > 0) {
+            const base = Number(baseBacaBasinci);
+            let minC = 0.9995;
+            let maxC = 1.0005;
+            if (basRange && Number.isFinite(basRange.min) && Number.isFinite(basRange.max)) {
+                minC = basRange.min;
+                maxC = basRange.max;
+            }
+            const carpan = (Math.random() * (maxC - minC) + minC);
+            val = (base * carpan).toFixed(2);
+        }
         input.value = val;
-        console.log(`[Baca Basıncı] Input ${index + 1}/${bacaMutlkBasInputs.length} "${input.name}": Çarpan=${basinciCarpan}, Değer=${val}, Base=${baseBacaBasinci}`);
+        console.log(`[Baca Basıncı] Input ${index + 1}/${bacaMutlkBasInputs.length} "${input.name}": Değer=${val}, Base=${baseBacaBasinci}`);
     });
     
     // Sayaç Sıcaklığı hücrelerini güncelle: 1. Aşamadaki sayaç gaz sıcaklığı × parametre çarpanı (row[7])
@@ -9544,6 +9589,51 @@ function getBacaBasinciCarpanFromParametre(parametreName) {
     } catch (e) {
         console.error('[Baca Basıncı] Çarpan alınırken hata:', e);
         return (Math.random() * 0.02 + 0.99).toFixed(5);
+    }
+}
+
+function getBacaBasinciCarpanRangeFromParametre(parametreName) {
+    try {
+        const excelData = JSON.parse(sessionStorage.getItem('excelData') || '[]');
+        if (!excelData || excelData.length === 0) {
+            return null;
+        }
+
+        let cleanParametre = String(parametreName).trim();
+        if (cleanParametre.length > 30 || cleanParametre.includes('Hız:') || cleanParametre.includes('Sıcaklık:')) {
+            const parts = cleanParametre.split(/\n|Hız:|Sıcaklık:/);
+            if (parts.length > 0 && parts[0].trim()) {
+                cleanParametre = parts[0].trim();
+            }
+        }
+
+        const normalizedParametre = cleanParametre.toUpperCase().replace(/\s+/g, ' ').trim();
+        for (let i = 0; i < excelData.length; i++) {
+            const row = excelData[i];
+            if (!row || row.length === 0) continue;
+            const nameCell = row[1] ? String(row[1]).trim().toUpperCase().replace(/\s+/g, ' ') : '';
+            if (!nameCell) continue;
+            if (!(nameCell === normalizedParametre || nameCell.includes(normalizedParametre) || normalizedParametre.includes(nameCell))) continue;
+
+            const candidate = row[5];
+            if (candidate && String(candidate).includes('-')) {
+                const rangeStr = String(candidate).replace(',', '.').trim();
+                const parts = rangeStr.split('-');
+                if (parts.length === 2) {
+                    const min = parseFloat(parts[0].trim());
+                    const max = parseFloat(parts[1].trim());
+                    if (!isNaN(min) && !isNaN(max) && min < max) {
+                        return { min, max };
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        return null;
+    } catch (e) {
+        return null;
     }
 }
 
