@@ -1,32 +1,12 @@
 [
     {
-        "firma_adi": "adem",
-        "olcum_kodu": "1",
-        "baca_no": "proses",
-        "baca_adi": "proses",
+        "firma_adi": "ATALAY TOKER",
+        "olcum_kodu": "3",
+        "baca_no": "q",
+        "baca_adi": "q",
         "parametre": "Toz_EPA5",
         "personel_adi": "",
-        "kayit_tarihi": "2025-12-12T14:16:58.520631",
-        "id": "7648991c-8ee2-4a54-8a53-7184dbdd6d09"
-    },
-    {
-        "firma_adi": "adem",
-        "olcum_kodu": "1",
-        "baca_no": "proses",
-        "baca_adi": "proses",
-        "parametre": "AĞIR MET_EPA 29",
-        "personel_adi": "",
-        "kayit_tarihi": "2025-12-12T14:16:58.520643",
-        "id": "3ca0c555-2d70-45b3-8b3e-cefda7317262"
-    },
-    {
-        "firma_adi": "adem",
-        "olcum_kodu": "1",
-        "baca_no": "proses",
-        "baca_adi": "proses",
-        "parametre": "SÜLFÜRİK ASİT",
-        "personel_adi": "",
-        "kayit_tarihi": "2025-12-12T14:16:58.520646",
-        "id": "177424e1-97d7-48a0-9d3c-b0466f730942"
+        "kayit_tarihi": "2026-01-08T09:42:59.909194",
+        "id": "29a31dbc-4bd7-4d50-a979-aa2c6c1dd4c5"
     }
 ]

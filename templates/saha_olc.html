@@ -852,37 +852,14 @@ function bulkDeleteSahaOlcum() {
             return;
         }
 
-        // Tablo satırlarını kaldır (seçili satırları kaldırmak en güvenlisi)
-        const checked = document.querySelectorAll('#sahaOlcumTable .saha-row-select:checked');
-        checked.forEach(cb => {
-            const tr = cb.closest('tr');
-            if (tr) tr.remove();
-        });
-
-        updateSahaSelectionUI();
-
-        // Silinen kayıtlarla ilişkili 1-3. aşama form ve cache verilerini de temizle
-        if (typeof clearFormFields === 'function') {
-            clearFormFields();
-        }
-
-        if (window && window.sessionStorage) {
-            try {
-                window.sessionStorage.removeItem('asama3Data');
-            } catch (e) {
-                console.warn('asama3Data temizlenemedi:', e);
-            }
-        }
-
-        if (window) {
-            window.existingAsama2Data = null;
-        }
-
         if (result.deleted) {
             console.log('Silinen kayıtlar:', result.deleted);
         }
 
         alert(result.message || 'Seçili ölçümler başarıyla silindi.');
+        
+        // Sayfayı yenile
+        location.reload();
     })
     .catch(err => {
         console.error('Toplu silme hatası:', err);
@@ -3027,29 +3004,8 @@ function deleteBacaBilgileri(rowId) {
             console.log('Backend yanıtı:', data);
             
             if (data.success) {
-                // Başarılı silme - satırı tablodan kaldır
-                const row = document.getElementById(`row_${rowId}`);
-                console.log('Bulunan satır:', row);
-                
-                if (row) {
-                    row.remove();
-                    updateRowNumbers();
-                    
-                    // Eğer tablo boşsa boş mesajı göster
-                    const tableBody = document.getElementById('bacaBilgileriTableBody');
-                    if (tableBody.children.length === 0) {
-                        document.getElementById('emptyMessage').style.display = 'block';
-                    }
-                    
-                    // Başarı mesajı göster
-                    alert('Baca bilgileri başarıyla silindi!');
-                } else {
-                    console.error('Satır bulunamadı, ID:', rowId);
-                    // Satır bulunamadıysa tabloyu yenile
-                    console.log('Tabloyu yeniliyor...');
-                    loadSavedBacaBilgileri();
-                    alert('Baca bilgileri silindi ve tablo yenilendi!');
-                }
+                alert('Baca bilgileri başarıyla silindi!');
+                location.reload();
             } else {
                 alert('Hata: ' + (data.error || 'Silme işlemi başarısız'));
             }
@@ -3831,7 +3787,7 @@ function deleteSelectedBaca() {
         .then(data => {
             if (data.success) {
                 alert(data.message);
-                loadBacaBilgileri(); // Tabloyu yenile
+                location.reload();
             } else {
                 alert('Silme sırasında hata oluştu: ' + data.error);
             }
@@ -4418,20 +4374,14 @@ function deleteSahaOlcum(id) {
             return;
         }
 
-        if (row) {
-            row.remove();
-        }
-
-        // Seçim sayacı ve butonları güncelle
-        if (typeof updateSahaSelectionUI === 'function') {
-            updateSahaSelectionUI();
-        }
-
         if (result.deleted) {
             console.log('Silinen kayıtlar:', result.deleted);
         }
 
         alert(result.message || 'Kayıt ve ilgili aşama verileri başarıyla silindi.');
+        
+        // Sayfayı yenile
+        location.reload();
     })
     .catch(err => {
         console.error('Silme hatası:', err);
@@ -5207,7 +5157,7 @@ function deleteSelectedParametreOlcumleri() {
     .then(data => {
         if (data.success) {
             alert(`${checkedBoxes.length} adet parametre ölçümü kaydı başarıyla silindi!`);
-            loadParametreOlcumleri(); // Tabloyu yenile
+            location.reload();
         } else {
             alert('Silme hatası: ' + (data.error || 'Bilinmeyen hata'));
         }
@@ -8289,6 +8239,20 @@ function calculateExcelTable(tableIndex) {
     const sayacHacimInputs = table.querySelectorAll('input[name*="sayacHacim_"]:not([name*="avg_"])');
     console.log(`[Sayaç Hacim] Bulunan input sayısı=${sayacHacimInputs.length}`);
     
+    // Önce ölçüm gruplarına göre ayır (son travers'i bulmak için)
+    const sayacHacimOlcumGroups = {};
+    sayacHacimInputs.forEach((input) => {
+        const inputName = input.name;
+        const match = inputName.match(/sayacHacim_(\d+)_(\d+)/);
+        if (match) {
+            const olcumNo = match[1];
+            if (!sayacHacimOlcumGroups[olcumNo]) {
+                sayacHacimOlcumGroups[olcumNo] = [];
+            }
+            sayacHacimOlcumGroups[olcumNo].push(input);
+        }
+    });
+    
     sayacHacimInputs.forEach((input, index) => {
         const inputName = input.name;
         const match = inputName.match(/sayacHacim_(\d+)_(\d+)/);
@@ -8309,7 +8273,20 @@ function calculateExcelTable(tableIndex) {
             if (sayacNHacim > 0 && atmosferBasnc > 0) {
                 const sicaklikFaktor = (273.15 + sayacSic) / 273.15;
                 const basincFaktor = 101.3 / atmosferBasnc;
-                const sayacHacim = sayacNHacim * sicaklikFaktor * basincFaktor;
+                let sayacHacim = sayacNHacim * sicaklikFaktor * basincFaktor;
+                
+                // Bu ölçüm grubunun son travers'i mi kontrol et
+                const olcumGrubu = sayacHacimOlcumGroups[olcumNo];
+                const sonTraversInput = olcumGrubu[olcumGrubu.length - 1];
+                const isSonTravers = (input === sonTraversInput);
+                
+                // Son travers ise VE birden fazla travers varsa 0.3-0.6 litre arası rastgele değer ekle
+                if (isSonTravers && olcumGrubu.length > 1) {
+                    const ekstraHacim = Math.random() * (0.6 - 0.3) + 0.3;
+                    sayacHacim += ekstraHacim;
+                    console.log(`[Sayaç Hacim] SON TRAVERS - Ekstra hacim eklendi: ${ekstraHacim.toFixed(2)} litre (Toplam travers: ${olcumGrubu.length})`);
+                }
+                
                 input.value = sayacHacim.toFixed(1);
                 console.log(`[Sayaç Hacim] ${inputName}: SayaçNHacim=${sayacNHacim}, SayaçSıc=${sayacSic}, AtmBasınç=${atmosferBasnc}, SayaçHacim=${sayacHacim.toFixed(1)}`);
             } else {
@@ -8716,7 +8693,7 @@ function calculateExcelTable(tableIndex) {
         }
     });
     
-    // Sayaç Hacim için TOPLAM hesapla
+    // Sayaç Hacim için TOPLAM hesapla ve birden fazla travers varsa son travers'e 0.3-0.6 litre ekle
     const avgSayacHacimInputs = table.querySelectorAll('input[name*="avg_sayacHacim_"]');
     console.log(`[Sayaç Hacim Toplam] Bulunan ortalama input sayısı: ${avgSayacHacimInputs.length}`);
     
@@ -8733,8 +8710,17 @@ function calculateExcelTable(tableIndex) {
                     toplam += deger;
                 }
             });
+            
+            // Birden fazla travers varsa toplama 0.3-0.6 litre arası rastgele değer ekle
+            if (normalInputs.length > 1) {
+                const ekstraHacim = Math.random() * (0.6 - 0.3) + 0.3;
+                toplam += ekstraHacim;
+                console.log(`[Sayaç Hacim Toplam] Ölçüm ${olcumNo}: Toplam=${(toplam - ekstraHacim).toFixed(1)}, Ekstra=${ekstraHacim.toFixed(2)}, Final=${toplam.toFixed(1)}`);
+            } else {
+                console.log(`[Sayaç Hacim Toplam] Ölçüm ${olcumNo}: Tek travers, Toplam=${toplam.toFixed(1)}`);
+            }
+            
             avgInput.value = toplam.toFixed(1);
-            console.log(`[Sayaç Hacim Toplam] Ölçüm ${olcumNo} TOPLAM: ${toplam.toFixed(1)}`);
         } else {
             avgInput.value = '0.0';
         }

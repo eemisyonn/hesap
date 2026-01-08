@@ -17,5 +17,22 @@
         },
         "notlar": "",
         "olusturma_tarihi": "2025-12-12T14:16:58.518577"
+    },
+    {
+        "id": "e8381038-82ef-469e-9da9-e3b0974e011a",
+        "firma_adi": "ATALAY TOKER",
+        "olcum_kodu": "3",
+        "baslangic_tarihi": "",
+        "bitis_tarihi": "",
+        "durum": "Aktif",
+        "personel": [],
+        "baca_sayisi": "1",
+        "baca_parametreleri": {
+            "q": [
+                "Toz_EPA5"
+            ]
+        },
+        "notlar": "",
+        "olusturma_tarihi": "2026-01-08T09:42:59.880818"
     }
 ]
