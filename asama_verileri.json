@@ -17,18 +17,18 @@
   },
   {
     "firma": "ATALAY TOKER",
-    "olcum_kodu": "3",
-    "baca": "q",
+    "olcum_kodu": "1",
+    "baca": "1",
     "personel": "",
     "asama": 1,
     "cihazSeri": "M5PMA- 1710",
     "bacaNo": "1",
     "ortalamaBacaHizi": "10",
-    "bacaSicakligi": "25",
-    "bacaMutlakBasinci": "100",
-    "nem": "5",
+    "bacaSicakligi": "50",
+    "bacaMutlakBasinci": "101.2",
+    "nem": "3",
     "sayacGazSicakligi": "25",
     "atmosferBasinci": "100",
-    "kayit_tarihi": "2026-01-08 10:57:20"
+    "kayit_tarihi": "2026-02-19 09:14:36"
   }
 ]

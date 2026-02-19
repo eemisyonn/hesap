@@ -5866,9 +5866,8 @@ function showAsama2Form() {
         fetchBacaParameters(baca);
     } else {
         console.error('Baca numarası bulunamadı!');
-        // Varsayılan parametreleri göster
-        const defaultParameters = ['Toz_EPA5', 'AĞIR MET_EPA 29'];
-        renderAsama2Form(defaultParameters);
+        // Baca seçili değilse parametre göstermeyelim
+        renderAsama2Form([]);
     }
     
     // Eğer daha önce kaydedilmiş 2. Aşama verileri varsa yükle
@@ -6078,6 +6077,8 @@ function fetchBacaParameters(bacaNo) {
             console.log('API data:', data);
             if (data.success) {
                 console.log('Parametreler başarıyla yüklendi:', data.parameters);
+                // En güncel parametre listesini global olarak sakla (3. Aşama filtrelemesi için)
+                window.currentBacaParameters = Array.isArray(data.parameters) ? data.parameters : [];
                 renderAsama2Form(data.parameters);
                 loadAsama2Data(bacaNo, data.parameters);
                 
@@ -6964,6 +6965,10 @@ function createAsama3Content() {
         asama3Content.innerHTML = '<div class="alert alert-warning">Önce 2. Aşamayı tamamlayın!</div>';
         return;
     }
+
+    // Eğer güncel parametre listesi biliniyorsa (API'den geldiyse) sadece onları kullan
+    const currentParams = Array.isArray(window.currentBacaParameters) ? window.currentBacaParameters : [];
+    const currentParamSet = new Set(currentParams.map(p => (p || '').toString().trim().toUpperCase()).filter(Boolean));
     
     // Her parametre için Excel tablosu oluştur
     let content = '';
@@ -6992,6 +6997,12 @@ function createAsama3Content() {
         }
         
         console.log(`[createAsama3Content] Parametre ${index} adı: "${parametreName}"`);
+
+        // Güncel parametre seti varsa, sadece seçili parametreler için tablo oluştur
+        if (currentParamSet.size > 0 && !currentParamSet.has(parametreName.toUpperCase())) {
+            console.log(`[createAsama3Content] Parametre filtrelendi (seçili değil): "${parametreName}"`);
+            return;
+        }
         
         // Travers sayısını al
         const traversSayisi = document.getElementById(`traversSayisi_${index}`).value || 1;
@@ -8776,15 +8787,15 @@ function calculateExcelTable(tableIndex) {
         }
     });
     
-    // Sayaç L/D için ORTALAMA hesapla
+    // Sayaç L/D için ORTALAMA hesapla (aritmetik ortalama)
     const avgSayacLDInputs = table.querySelectorAll('input[name*="avg_sayacLD_"]');
     console.log(`[Sayaç L/D Ortalama] Bulunan ortalama input sayısı: ${avgSayacLDInputs.length}`);
-    
+
     avgSayacLDInputs.forEach(avgInput => {
         const avgInputName = avgInput.name;
         const olcumNo = avgInputName.match(/avg_sayacLD_(\d+)/)[1];
         const normalInputs = table.querySelectorAll(`input[name^="sayacLD_${olcumNo}_"]`);
-        
+
         if (normalInputs.length > 0) {
             let toplam = 0;
             let gecerli = 0;
@@ -8802,7 +8813,7 @@ function calculateExcelTable(tableIndex) {
         }
     });
     
-    // Sayaç NL/D için ORTALAMA hesapla
+    // Sayaç NL/D için ORTALAMA hesapla (aritmetik ortalama)
     const avgSayacNLDInputs = table.querySelectorAll('input[name*="avg_sayacNLD_"]');
     console.log(`[Sayaç NL/D Ortalama] Bulunan ortalama input sayısı: ${avgSayacNLDInputs.length}`);
     
@@ -10278,6 +10289,33 @@ function createAsama4TxtCards() {
     if (!container) return;
     
     container.innerHTML = '';
+
+    const norm = (s) => {
+        return String(s || '')
+            .split('\n')[0]
+            .trim()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toUpperCase()
+            .replace(/\s+/g, ' ');
+    };
+
+    const getTraversCountForParam = (paramName) => {
+        const a2 = getSessionJson('asama2Data') || window.existingAsama2Data;
+        const list = a2 && Array.isArray(a2.parametreler) ? a2.parametreler : [];
+        if (!list.length) return '';
+
+        const pN = norm(paramName);
+        let rec = list.find(p => norm(p.parametre) === pN);
+        if (!rec) rec = list.find(p => norm(p.parametre).startsWith(pN));
+        if (!rec) rec = list.find(p => {
+            const n = norm(p.parametre);
+            return n.includes(pN) || pN.includes(n);
+        });
+
+        const t = rec ? parseInt(rec.traversSayisi, 10) : NaN;
+        return (!isNaN(t) && t > 0) ? String(t) : '';
+    };
     
     // 3. aşama parametrelerini al
     const asama3Data = getSessionJson('asama3Data');
@@ -10290,6 +10328,8 @@ function createAsama4TxtCards() {
     asama3Data.parametreler.forEach((param, paramIndex) => {
         const paramName = param.parametre || `Parametre ${paramIndex + 1}`;
         const paramShortName = paramName.split(/\s+/)[0]; // İlk kelime
+        const traversCountText = getTraversCountForParam(paramName);
+        const traversInfoText = traversCountText ? `${traversCountText} Travers verisi içerir` : '';
         
         const rowDiv = document.createElement('div');
         rowDiv.className = 'row mb-3';
@@ -10314,7 +10354,7 @@ function createAsama4TxtCards() {
                         </div>
                     </div>
                     <div class="card-body">
-                        <p class="card-text"><small>6 Travers verisi içerir</small></p>
+                        <p class="card-text"><small>${traversInfoText}</small></p>
                     </div>
                 </div>
             </div>
@@ -10335,7 +10375,7 @@ function createAsama4TxtCards() {
                         </div>
                     </div>
                     <div class="card-body">
-                        <p class="card-text"><small>6 Travers verisi içerir</small></p>
+                        <p class="card-text"><small>${traversInfoText}</small></p>
                     </div>
                 </div>
             </div>
@@ -10356,7 +10396,7 @@ function createAsama4TxtCards() {
                         </div>
                     </div>
                     <div class="card-body">
-                        <p class="card-text"><small>6 Travers verisi içerir</small></p>
+                        <p class="card-text"><small>${traversInfoText}</small></p>
                     </div>
                 </div>
             </div>

@@ -1,7 +1,7 @@
 [
     {
-        "id": "f658aa9a-a3f3-4335-96b3-94263760e23c",
-        "firma_adi": "adem",
+        "id": "ec29bf65-668e-4440-bae1-66f022e07a3c",
+        "firma_adi": "ATALAY TOKER",
         "olcum_kodu": "1",
         "baslangic_tarihi": "",
         "bitis_tarihi": "",
@@ -9,30 +9,12 @@
         "personel": [],
         "baca_sayisi": "1",
         "baca_parametreleri": {
-            "proses": [
+            "1": [
                 "Toz_EPA5",
-                "AĞIR MET_EPA 29",
-                "SÜLFÜRİK ASİT"
+                "AĞIR MET_EPA 29"
             ]
         },
         "notlar": "",
-        "olusturma_tarihi": "2025-12-12T14:16:58.518577"
-    },
-    {
-        "id": "e8381038-82ef-469e-9da9-e3b0974e011a",
-        "firma_adi": "ATALAY TOKER",
-        "olcum_kodu": "3",
-        "baslangic_tarihi": "",
-        "bitis_tarihi": "",
-        "durum": "Aktif",
-        "personel": [],
-        "baca_sayisi": "1",
-        "baca_parametreleri": {
-            "q": [
-                "Toz_EPA5"
-            ]
-        },
-        "notlar": "",
-        "olusturma_tarihi": "2026-01-08T09:42:59.880818"
+        "olusturma_tarihi": "2026-02-18T23:42:20.608766"
     }
 ]

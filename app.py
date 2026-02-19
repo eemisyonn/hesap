@@ -6009,27 +6009,28 @@ def get_baca_parameters():
                 print(f"[API] İlk 3 baca_bilgileri kaydı:")
                 for i, rec in enumerate(baca_bilgileri[:3]):
                     print(f"  [{i}] Firma: {rec.get('firma_adi', rec.get('firma', 'N/A'))}, Ölçüm: {rec.get('olcum_kodu', 'N/A')}, Baca: {rec.get('baca_no', 'N/A')}, Parametre: {rec.get('parametre', 'N/A')}")
-            # Varsayılan parametreler döndür (boş liste yerine)
-            print(f"[API] Varsayılan parametreler döndürülüyor: ['Toz_EPA5', 'AĞIR MET_EPA 29']")
-            parameters = ['Toz_EPA5', 'AĞIR MET_EPA 29']
+            # Parametre bulunamadıysa varsayılan bir liste döndürmeyelim.
+            # Aksi halde kullanıcı sadece TOZ seçse bile AĞIR MET gibi ilgisiz parametreler ekranda görünebiliyor.
+            print(f"[API] Parametre bulunamadı, boş liste döndürülüyor")
         else:
             print(f"[API] ✅ {len(parameters)} parametre bulundu: {list(parameters)}")
         
         return jsonify({
             'success': True,
-            'parameters': list(parameters)
+            'parameters': list(parameters),
+            **({'warning': 'Bu baca için tanımlı parametre bulunamadı'} if not parameters else {})
         })
         
     except Exception as e:
         print(f"[API] ❌ Baca parametreleri getirilirken hata: {e}")
         import traceback
         traceback.print_exc()
-        # Hata durumunda bile varsayılan parametreler döndür
-        print(f"[API] Hata nedeniyle varsayılan parametreler döndürülüyor")
+        # Hata durumunda varsayılan parametre döndürmeyelim; boş liste ile dönelim.
+        print(f"[API] Hata nedeniyle boş parametre listesi döndürülüyor")
         return jsonify({
             'success': True,
-            'parameters': ['Toz_EPA5', 'AĞIR MET_EPA 29'],
-            'warning': f'Veri yükleme hatası, varsayılan parametreler kullanıldı: {str(e)}'
+            'parameters': [],
+            'warning': f'Veri yükleme hatası: {str(e)}'
         })
 @app.route('/api/save_asama2_data', methods=['POST'])
 def save_asama2_data():
@@ -11663,13 +11664,36 @@ def generate_eurometric_report(template, asama1_data, asama2_data, asama3_data, 
     # Ortalama satırlarını filtrele
     all_travers_rows = [h for h in hesaplamalar if not h.get('ortalama', False)]
     
-    # Ölçüm için travers sayısını belirle (2. aşamadan veya ilk 6 travers)
+    # Ölçüm için travers sayısını belirle (2. aşamadan - parametre adıyla eşle)
     travers_count = 6
     if asama2_data and asama2_data.get('parametreler'):
-        params_a2 = asama2_data['parametreler']
-        if param_index < len(params_a2):
-            param_a2 = params_a2[param_index]
-            travers_count = int(param_a2.get('traversSayisi', 6)) if param_a2.get('traversSayisi') else 6
+        try:
+            def _norm(s):
+                import unicodedata
+                s = str(s or '').split('\n')[0].strip()
+                s = unicodedata.normalize('NFD', s)
+                s = ''.join(ch for ch in s if unicodedata.category(ch) != 'Mn')
+                s = ' '.join(s.upper().split())
+                return s
+
+            target_name = _norm(parametre)
+            params_a2 = asama2_data['parametreler']
+            param_a2 = None
+            for p in params_a2:
+                if _norm(p.get('parametre')) == target_name:
+                    param_a2 = p
+                    break
+            if not param_a2:
+                for p in params_a2:
+                    pn = _norm(p.get('parametre'))
+                    if pn.startswith(target_name) or target_name.startswith(pn):
+                        param_a2 = p
+                        break
+
+            if param_a2 and param_a2.get('traversSayisi'):
+                travers_count = int(param_a2.get('traversSayisi'))
+        except Exception:
+            travers_count = 6
     
     # Belirtilen ölçüm numarasına göre travers'leri al
     # 1. ölçüm: 0-5, 2. ölçüm: 6-11, 3. ölçüm: 12-17, vs.
@@ -11902,22 +11926,25 @@ izokin.verimi : {fmt(t_izok_verim, 5, 2)}
 
         o_bitis = format_date_for_eurometric(o_bitis_raw) if o_bitis_raw else ''
 
-        # Örnekleme süresi: son travers'in süresi (hh:mm)
-        last_travers_sure = travers_rows[-1].get('degerler', {}).get('deger_5', '00:00')[:5] if travers_rows else ''
-        o_ornekleme_sure_hhmm = last_travers_sure
+        # Örnekleme süresi: ORTALAMA satırındaki toplam süre (hh:mm) (örn 50:00)
+        # Travers satırlarında deger_5 kümülatif olduğundan (10:00, 20:00, ...), raporda toplam süre kullanılmalı.
+        o_ornekleme_sure_hhmm = (avg_row.get('deger_5', '') or '')[:5]
 
         # Ortalama baca hızı (7. sütun) - ölçüme özel ortalama
         o_ort_baca_hizi_ms = avg_row.get('deger_7', '')
 
-        # Ortalama vakum debisi: 3. aşama ortalama satırındaki 16. ve 15. sütunlar
-        # 15. sütun: Sayaç L/D, 16. sütun: Sayaç NL/D
-        o_ort_vakum_debi_l_d = avg_row.get('deger_15', '')
-        o_ort_vakum_debi_nl_d = avg_row.get('deger_16', '')
+        # Ortalama vakum debisi: 3. aşama ORTALAMA satırı
+        # Kolon eşlemesi (0-based th idx -> deger_):
+        # 14: Sayaç L/D, 15: Sayaç NL/D, 16: Sayaç sic., 17: Sayac gaz
+        o_ort_vakum_debi_l_d = avg_row.get('deger_14', '')
+        o_ort_vakum_debi_nl_d = avg_row.get('deger_15', '')
 
-        o_kurugaz_nl = avg_row.get('deger_11', '')
+        # Rapor alanları:
+        # Kurugaz hacmi raporda, ekrandaki "Sayaç Nhacim" toplamına karşılık geliyor (Nl)
+        o_kurugaz_nl = avg_row.get('deger_13', '')
         o_sayac_hacmi_l = avg_row.get('deger_12', '')
         o_baca_sicak_c = avg_row.get('deger_8', '')
-        o_sayac_gaz_c = avg_row.get('deger_16', '')  # Sayaç gaz için 16. sütun değerini de kullan
+        o_sayac_gaz_c = avg_row.get('deger_17', '')
         o_ref_sic_c = ''  # Referans sıcaklık
 
         # Baca mutlak basıncı (kPa) ve mmHg dönüşümü

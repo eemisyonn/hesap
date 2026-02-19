@@ -1,27 +1,22 @@
 [
   {
     "firma": "ATALAY TOKER",
-    "olcum_kodu": "3",
-    "baca": "q",
+    "olcum_kodu": "1",
+    "baca": "1",
     "personel": "",
     "asama": 2,
     "parametreler": [
       {
-        "parametre": "Toz_EPA5\n                \n                    \n                    Hız: 10 m/s | Sıcaklık: 25 °C | Basınç: 100 kPa | Nem: 5% | Atmosfer: 100 kPa | Seri: M5PMA- 1710",
-        "baslangic": "08/01/26 10:43",
-        "ayarlananSure": "2880.0",
-        "traversSayisi": "12",
-        "nozzleCapi": "7",
-        "sure": "240",
-        "sayacHacmi": "1108.4",
-        "ortVakumDebi": "23.1",
-        "olcum1Bitis": "08/01/26 11:31",
-        "olcum2Baslangic": "08/01/26 11:42",
-        "olcum2Bitis": "08/01/26 12:30",
-        "olcum3Baslangic": "08/01/26 12:41",
-        "olcum3Bitis": "08/01/26 13:29"
+        "parametre": "Toz_EPA5\n                \n                    \n                    Hız: 10 m/s | Sıcaklık: 50 °C | Basınç: 101.2 kPa | Nem: 3% | Atmosfer: 100 kPa | Seri: M5PMA- 1710",
+        "baslangic": "10/02/26 00:00",
+        "ayarlananSure": "3000.0",
+        "traversSayisi": "5",
+        "nozzleCapi": "6",
+        "sure": "600",
+        "sayacHacmi": "848.2",
+        "ortVakumDebi": "17"
       }
     ],
-    "kayit_tarihi": "2026-01-08 10:57:24"
+    "kayit_tarihi": "2026-02-19 09:14:39"
   }
 ]
