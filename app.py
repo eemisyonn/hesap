@@ -1,4 +1,4 @@
-import os
+﻿import os
 import json
 import gc
 import shutil
@@ -5051,7 +5051,7 @@ def tum_sonuclar():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
     try:
-        with open('asama_verileri.json', 'r', encoding='utf-8') as f:
+        with open(data_path('asama_verileri.json'), 'r', encoding='utf-8') as f:
             content = f.read().strip()
             if content:
                 asama_verileri = json.loads(content)
@@ -5073,7 +5073,7 @@ def tum_sonuclar():
 
     # 2. Aşama verileri (parametre bazlı süre, travers, nozzle, sayaç hacmi vb.)
     try:
-        with open('asama2_verileri.json', 'r', encoding='utf-8') as f:
+        with open(data_path('asama2_verileri.json'), 'r', encoding='utf-8') as f:
             content = f.read().strip()
             if content:
                 asama2_verileri = json.loads(content)
@@ -5084,7 +5084,7 @@ def tum_sonuclar():
 
     # 3. Aşama verileri
     try:
-        with open('asama3_verileri.json', 'r', encoding='utf-8') as f:
+        with open(data_path('asama3_verileri.json'), 'r', encoding='utf-8') as f:
             content = f.read().strip()
             if content:
                 asama3_verileri = json.loads(content)
@@ -5863,7 +5863,7 @@ def save_asama_data():
         
         # Mevcut verileri oku - JSONDecodeError yakala
         try:
-            with open('asama_verileri.json', 'r', encoding='utf-8') as f:
+            with open(data_path('asama_verileri.json'), 'r', encoding='utf-8') as f:
                 content = f.read().strip()
                 if not content:
                     mevcut_veriler = []
@@ -5885,7 +5885,7 @@ def save_asama_data():
         mevcut_veriler.append(asama_data)
         
         # Dosyaya kaydet
-        with open('asama_verileri.json', 'w', encoding='utf-8') as f:
+        with open(data_path('asama_verileri.json'), 'w', encoding='utf-8') as f:
             json.dump(mevcut_veriler, f, ensure_ascii=False, indent=2)
         
         return jsonify({
@@ -5903,7 +5903,7 @@ def get_latest_asama_data():
     try:
         # Dosyayı oku
         try:
-            with open('asama_verileri.json', 'r', encoding='utf-8') as f:
+            with open(data_path('asama_verileri.json'), 'r', encoding='utf-8') as f:
                 veriler = json.load(f)
             
             if veriler:
@@ -6083,7 +6083,7 @@ def save_asama2_data():
         
         # Mevcut verileri oku - JSONDecodeError yakala
         try:
-            with open('asama2_verileri.json', 'r', encoding='utf-8') as f:
+            with open(data_path('asama2_verileri.json'), 'r', encoding='utf-8') as f:
                 content = f.read().strip()
                 if not content:
                     mevcut_veriler = []
@@ -6108,7 +6108,7 @@ def save_asama2_data():
             mevcut_veriler.append(asama2_data)
         
         # Dosyaya kaydet
-        with open('asama2_verileri.json', 'w', encoding='utf-8') as f:
+        with open(data_path('asama2_verileri.json'), 'w', encoding='utf-8') as f:
             json.dump(mevcut_veriler, f, ensure_ascii=False, indent=2)
         
         return jsonify({
@@ -6133,7 +6133,7 @@ def get_asama2_data():
         
         # Dosyayı oku - JSONDecodeError yakala
         try:
-            with open('asama2_verileri.json', 'r', encoding='utf-8') as f:
+            with open(data_path('asama2_verileri.json'), 'r', encoding='utf-8') as f:
                 content = f.read().strip()
                 if not content:
                     veriler = []
@@ -6183,9 +6183,9 @@ def get_existing_asama1_data():
             return jsonify({'success': False, 'message': 'Firma, ölçüm kodu ve baca gerekli'})
         
         # asama_verileri.json dosyasını oku - JSONDecodeError yakala
-        if os.path.exists('asama_verileri.json'):
+        if os.path.exists(data_path('asama_verileri.json')):
             try:
-                with open('asama_verileri.json', 'r', encoding='utf-8') as f:
+                with open(data_path('asama_verileri.json'), 'r', encoding='utf-8') as f:
                     content = f.read().strip()
                     if not content:
                         all_data = []
@@ -6236,9 +6236,9 @@ def get_existing_asama2_data():
             return jsonify({'success': False, 'message': 'Firma, ölçüm kodu ve baca gerekli'})
         
         # asama2_verileri.json dosyasını oku - JSONDecodeError yakala
-        if os.path.exists('asama2_verileri.json'):
+        if os.path.exists(data_path('asama2_verileri.json')):
             try:
-                with open('asama2_verileri.json', 'r', encoding='utf-8') as f:
+                with open(data_path('asama2_verileri.json'), 'r', encoding='utf-8') as f:
                     content = f.read().strip()
                     if not content:
                         all_data = []
@@ -11352,7 +11352,7 @@ def save_asama3_data():
         
         # Mevcut verileri oku - JSONDecodeError yakala
         try:
-            with open('asama3_verileri.json', 'r', encoding='utf-8') as f:
+            with open(data_path('asama3_verileri.json'), 'r', encoding='utf-8') as f:
                 content = f.read().strip()
                 if not content:
                     mevcut_veriler = []
@@ -11374,7 +11374,7 @@ def save_asama3_data():
         mevcut_veriler.append(asama3_data)
         
         # Dosyaya kaydet
-        with open('asama3_verileri.json', 'w', encoding='utf-8') as f:
+        with open(data_path('asama3_verileri.json'), 'w', encoding='utf-8') as f:
             json.dump(mevcut_veriler, f, ensure_ascii=False, indent=2)
         
         return jsonify({
@@ -11399,7 +11399,7 @@ def get_asama3_data():
         
         # Dosyayı oku - JSONDecodeError yakala
         try:
-            with open('asama3_verileri.json', 'r', encoding='utf-8') as f:
+            with open(data_path('asama3_verileri.json'), 'r', encoding='utf-8') as f:
                 content = f.read().strip()
                 if not content:
                     veriler = []
@@ -11447,7 +11447,7 @@ def export_eurometric():
         
         # 3. Aşama verilerini yükle
         try:
-            with open('asama3_verileri.json', 'r', encoding='utf-8') as f:
+            with open(data_path('asama3_verileri.json'), 'r', encoding='utf-8') as f:
                 content = f.read().strip()
                 if not content:
                     asama3_veriler = []
@@ -11474,7 +11474,7 @@ def export_eurometric():
         asama2_data = None
         
         try:
-            with open('asama_verileri.json', 'r', encoding='utf-8') as f:
+            with open(data_path('asama_verileri.json'), 'r', encoding='utf-8') as f:
                 content = f.read().strip()
                 if content:
                     asama1_veriler = json.loads(content)
@@ -11489,7 +11489,7 @@ def export_eurometric():
             pass
         
         try:
-            with open('asama2_verileri.json', 'r', encoding='utf-8') as f:
+            with open(data_path('asama2_verileri.json'), 'r', encoding='utf-8') as f:
                 content = f.read().strip()
                 if content:
                     asama2_veriler = json.loads(content)
@@ -12522,3 +12522,4 @@ if __name__ == '__main__':
             use_reloader=True,
             use_debugger=True
         )
+
