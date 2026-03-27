@@ -4614,7 +4614,7 @@ def api_bulk_delete_saha_olcumleri():
                 json.dump(data, f, ensure_ascii=False, indent=2)
 
         # 2) 1. Aşama verileri (asama_verileri.json, asama == 1)
-        asama1_path = 'asama_verileri.json'
+        asama1_path = data_path('asama_verileri.json')
         asama1_veriler = load_json_list(asama1_path)
         before_asama1 = len(asama1_veriler)
         asama1_veriler = [
@@ -4631,7 +4631,7 @@ def api_bulk_delete_saha_olcumleri():
             save_json_list(asama1_path, asama1_veriler)
 
         # 3) 2. Aşama verileri (asama2_verileri.json, asama == 2)
-        asama2_path = 'asama2_verileri.json'
+        asama2_path = data_path('asama2_verileri.json')
         asama2_veriler = load_json_list(asama2_path)
         before_asama2 = len(asama2_veriler)
         asama2_veriler = [
@@ -4648,7 +4648,7 @@ def api_bulk_delete_saha_olcumleri():
             save_json_list(asama2_path, asama2_veriler)
 
         # 4) 3. Aşama verileri (asama3_verileri.json, asama == 3)
-        asama3_path = 'asama3_verileri.json'
+        asama3_path = data_path('asama3_verileri.json')
         asama3_veriler = load_json_list(asama3_path)
         before_asama3 = len(asama3_veriler)
         asama3_veriler = [
