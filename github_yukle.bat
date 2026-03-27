@@ -22,6 +22,7 @@ if %errorlevel% neq 0 (
 
 REM Repo URL (senin ekranindaki repo)
 set REPO_URL=https://github.com/aadem1983/hesap.git
+set REPO_OWNER=aadem1983
 
 REM Git deposu yoksa baslat
 if not exist ".git" (
@@ -67,11 +68,23 @@ if %errorlevel% neq 0 (
 )
 
 echo [6/7] GitHub'a gonderiliyor...
-git push -u origin main
+git push -u origin main > "%TEMP%\github_push_log.txt" 2>&1
 if %errorlevel% neq 0 (
     echo.
     echo HATA: Push basarisiz oldu.
-    echo Not: Ilk seferde GitHub girisi veya token isteyebilir.
+    type "%TEMP%\github_push_log.txt"
+    findstr /i "403 denied" "%TEMP%\github_push_log.txt" >nul
+    if %errorlevel% equ 0 (
+        echo.
+        echo Muhtemel neden: Yanlis GitHub hesabi ile giris yapildi.
+        echo Bu repo sahibi: %REPO_OWNER%
+        echo Su adimlari uygula:
+        echo 1^) Windows Credential Manager'dan github.com kaydini sil.
+        echo 2^) Tekrar calistirinca dogru hesapla (%REPO_OWNER%) giris yap.
+        echo 3^) Gerekirse GitHub PAT kullan.
+    ) else (
+        echo Not: Ilk seferde GitHub girisi veya token isteyebilir.
+    )
     pause
     exit /b 1
 )
