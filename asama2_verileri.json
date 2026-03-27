@@ -1,0 +1,27 @@
+[
+  {
+    "firma": "KAMURAN OSMAN",
+    "olcum_kodu": "2",
+    "baca": "a",
+    "personel": "",
+    "asama": 2,
+    "parametreler": [
+      {
+        "parametre": "Toz_EPA5\n                \n                    \n                    Hız: 10 m/s | Sıcaklık: 100 °C | Basınç: 100.3 kPa | Nem: 2% | Atmosfer: 101.1 kPa | Seri: M5PMA- 1710",
+        "baslangic": "27/03/26 16:10",
+        "ayarlananSure": "3000.0",
+        "traversSayisi": "5",
+        "nozzleCapi": "6",
+        "sure": "600",
+        "sayacHacmi": "848.2",
+        "ortVakumDebi": "17",
+        "olcum1Bitis": "27/03/26 17:00",
+        "olcum2Baslangic": "27/03/26 17:10",
+        "olcum2Bitis": "27/03/26 18:00",
+        "olcum3Baslangic": "27/03/26 18:10",
+        "olcum3Bitis": "27/03/26 19:00"
+      }
+    ],
+    "kayit_tarihi": "2026-03-27 14:45:52"
+  }
+]

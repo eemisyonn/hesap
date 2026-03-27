@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}SONUCLAR{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-list-alt me-2"></i>SONUCLAR
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col" class="text-center" style="width: 60px;">SIRA</th>
+                                    <th scope="col">FIRMA</th>
+                                    <th scope="col">OLCUM KOD</th>
+                                    <th scope="col">BACA ADI</th>
+                                    <th scope="col">BACA NO</th>
+                                    <th scope="col">PARAMETRE</th>
+                                    <th scope="col">HIZ</th>
+                                    <th scope="col">TRAV</th>
+                                    <th scope="col">NOZZLE</th>
+                                    <th scope="col">TOP HAC</th>
+                                    <th scope="col">CIHAZ NO</th>
+                                    <th scope="col">OLCUM TARIHI</th>
+                                    <th scope="col" class="text-center" style="width: 140px;">OLCUMLER</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if sonuc_kayitlari and sonuc_kayitlari|length > 0 %}
+                                    {% for rec in sonuc_kayitlari %}
+                                        <tr>
+                                            <td class="text-center">{{ rec.sira }}</td>
+                                            <td>{{ rec.firma }}</td>
+                                            <td>{{ rec.olcum_kodu }}</td>
+                                            <td>{{ rec.baca_adi }}</td>
+                                            <td>{{ rec.baca_no }}</td>
+                                            <td>{{ rec.parametre }}</td>
+                                            <td>{{ rec.hiz }}</td>
+                                            <td>{{ rec.trav }}</td>
+                                            <td>{{ rec.nozzle }}</td>
+                                            <td>{{ rec.top_hac }}</td>
+                                            <td>{{ rec.cihaz_no }}</td>
+                                            <td>{{ rec.olcum_tarihi }}</td>
+                                            <td class="text-center">
+                                                <div class="btn-group btn-group-sm" role="group" aria-label="Olcumler">
+                                                    <a class="btn btn-outline-secondary" title="1. Ölçüm TXT"
+                                                       href="{{ url_for('export_eurometric') }}?firma={{ rec.firma | urlencode }}&olcum_kodu={{ rec.olcum_kodu | urlencode }}&baca={{ rec.baca | urlencode }}&olcum_no=1&param_index={{ rec.param_index }}">
+                                                        1
+                                                    </a>
+                                                    <a class="btn btn-outline-secondary" title="2. Ölçüm TXT"
+                                                       href="{{ url_for('export_eurometric') }}?firma={{ rec.firma | urlencode }}&olcum_kodu={{ rec.olcum_kodu | urlencode }}&baca={{ rec.baca | urlencode }}&olcum_no=2&param_index={{ rec.param_index }}">
+                                                        2
+                                                    </a>
+                                                    <a class="btn btn-outline-secondary" title="3. Ölçüm TXT"
+                                                       href="{{ url_for('export_eurometric') }}?firma={{ rec.firma | urlencode }}&olcum_kodu={{ rec.olcum_kodu | urlencode }}&baca={{ rec.baca | urlencode }}&olcum_no=3&param_index={{ rec.param_index }}">
+                                                        3
+                                                    </a>
+                                                    <a class="btn btn-outline-secondary" title="Tüm Ölçümler TXT (1-2-3 birleştirilmiş)"
+                                                       href="#"
+                                                       onclick="window.open('/api/export_eurometric?firma={{ rec.firma | urlencode }}&olcum_kodu={{ rec.olcum_kodu | urlencode }}&baca={{ rec.baca | urlencode }}&olcum_no=all&param_index={{ rec.param_index }}','_blank'); return false;">
+                                                        T
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="9" class="text-center text-muted py-4">
+                                            Gösterilecek sonuç bulunamadı. Önce 3. aşama ölçüm verilerini kaydedin.
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{% endblock %}

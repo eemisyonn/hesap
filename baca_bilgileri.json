@@ -1,0 +1,22 @@
+[
+    {
+        "firma_adi": "ATALAY TOKER",
+        "olcum_kodu": "1",
+        "baca_no": "1",
+        "baca_adi": "1",
+        "parametre": "Toz_EPA5",
+        "personel_adi": "",
+        "kayit_tarihi": "2026-02-18T23:42:20.610301",
+        "id": "ef3a1594-866d-430b-8161-9e3197c8bbf9"
+    },
+    {
+        "firma_adi": "KAMURAN OSMAN",
+        "olcum_kodu": "2",
+        "baca_no": "a",
+        "baca_adi": "a",
+        "parametre": "Toz_EPA5",
+        "personel_adi": "",
+        "kayit_tarihi": "2026-03-27T14:03:07.153233",
+        "id": "bb0e1a57-4719-4dd6-9542-6e86a97d8d80"
+    }
+]

@@ -1,0 +1,37 @@
+[
+    {
+        "id": "ec29bf65-668e-4440-bae1-66f022e07a3c",
+        "firma_adi": "ATALAY TOKER",
+        "olcum_kodu": "1",
+        "baslangic_tarihi": "",
+        "bitis_tarihi": "",
+        "durum": "Aktif",
+        "personel": [],
+        "baca_sayisi": "1",
+        "baca_parametreleri": {
+            "1": [
+                "Toz_EPA5",
+                "AĞIR MET_EPA 29"
+            ]
+        },
+        "notlar": "",
+        "olusturma_tarihi": "2026-02-18T23:42:20.608766"
+    },
+    {
+        "id": "72d66bd0-54c1-4a67-a94f-374f784a72c8",
+        "firma_adi": "KAMURAN OSMAN",
+        "olcum_kodu": "2",
+        "baslangic_tarihi": "",
+        "bitis_tarihi": "",
+        "durum": "Aktif",
+        "personel": [],
+        "baca_sayisi": "1",
+        "baca_parametreleri": {
+            "a": [
+                "Toz_EPA5"
+            ]
+        },
+        "notlar": "",
+        "olusturma_tarihi": "2026-03-27T14:03:07.151233"
+    }
+]

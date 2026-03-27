@@ -1,0 +1,49 @@
+[
+    {
+        "id": "19caa702-1e63-4dae-8f16-c33d8ee2f39d",
+        "firma_adi": "resul",
+        "olcum_kodu": "1",
+        "baslangic_tarihi": "",
+        "bitis_tarihi": "",
+        "durum": "Aktif",
+        "personel": [],
+        "baca_sayisi": "1",
+        "baca_parametreleri": {
+            "1": [
+                "Toz_EPA5",
+                "AĞIR MET_EPA 29"
+            ]
+        },
+        "notlar": "",
+        "olusturma_tarihi": "2025-12-10T22:20:05.128725"
+    },
+    {
+        "id": "b7a18aa2-c6b9-4fa2-b6dc-f3c08dd942e6",
+        "firma_adi": "kaan",
+        "olcum_kodu": "2",
+        "baslangic_tarihi": "",
+        "bitis_tarihi": "",
+        "durum": "Aktif",
+        "personel": [],
+        "baca_sayisi": "5",
+        "baca_parametreleri": {
+            "1": [
+                "Toz_EPA5"
+            ],
+            "2": [
+                "TOZ_EPA 17"
+            ],
+            "3": [
+                "Toz_EPA5"
+            ],
+            "4": [
+                "TOZ_EPA 17"
+            ],
+            "5": [
+                "Toz_EPA5"
+            ]
+        },
+        "notlar": "",
+        "olusturma_tarihi": "2025-12-10T22:21:07.473254"
+    }
+]

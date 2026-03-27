@@ -1,0 +1,72 @@
+[
+    {
+        "firma_adi": "resul",
+        "olcum_kodu": "1",
+        "baca_no": "1",
+        "baca_adi": "1",
+        "parametre": "Toz_EPA5",
+        "personel_adi": "",
+        "kayit_tarihi": "2025-12-10T22:20:05.130384",
+        "id": "b3ee808c-6b84-4ef7-99ec-8136bfb36f9a"
+    },
+    {
+        "firma_adi": "resul",
+        "olcum_kodu": "1",
+        "baca_no": "1",
+        "baca_adi": "1",
+        "parametre": "AĞIR MET_EPA 29",
+        "personel_adi": "",
+        "kayit_tarihi": "2025-12-10T22:20:05.130400",
+        "id": "f23e23b9-e437-47d4-b4e2-2c72a25419fe"
+    },
+    {
+        "firma_adi": "kaan",
+        "olcum_kodu": "2",
+        "baca_no": "1",
+        "baca_adi": "1",
+        "parametre": "Toz_EPA5",
+        "personel_adi": "",
+        "kayit_tarihi": "2025-12-10T22:21:07.490713",
+        "id": "19161a14-7788-42f8-848c-2856a13d02d9"
+    },
+    {
+        "firma_adi": "kaan",
+        "olcum_kodu": "2",
+        "baca_no": "2",
+        "baca_adi": "2",
+        "parametre": "TOZ_EPA 17",
+        "personel_adi": "",
+        "kayit_tarihi": "2025-12-10T22:21:07.490729",
+        "id": "968784aa-8863-47f0-a2ad-da7cceb73f8c"
+    },
+    {
+        "firma_adi": "kaan",
+        "olcum_kodu": "2",
+        "baca_no": "3",
+        "baca_adi": "3",
+        "parametre": "Toz_EPA5",
+        "personel_adi": "",
+        "kayit_tarihi": "2025-12-10T22:21:07.490745",
+        "id": "d4319399-da70-45f4-92c3-8bc78a515f98"
+    },
+    {
+        "firma_adi": "kaan",
+        "olcum_kodu": "2",
+        "baca_no": "4",
+        "baca_adi": "4",
+        "parametre": "TOZ_EPA 17",
+        "personel_adi": "",
+        "kayit_tarihi": "2025-12-10T22:21:07.490751",
+        "id": "5c6d82d4-8e47-429e-95a2-18f71bcc35f6"
+    },
+    {
+        "firma_adi": "kaan",
+        "olcum_kodu": "2",
+        "baca_no": "5",
+        "baca_adi": "5",
+        "parametre": "Toz_EPA5",
+        "personel_adi": "",
+        "kayit_tarihi": "2025-12-10T22:21:07.490757",
+        "id": "c6155e8d-e215-417f-a028-e0a456bcc6bd"
+    }
+]

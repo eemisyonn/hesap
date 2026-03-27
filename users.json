@@ -1,0 +1,17 @@
+{
+    "admin": {
+        "password": "kamatadem",
+        "role": "admin",
+        "surname": "",
+        "gorev": "",
+        "asgFiyat": ""
+    },
+    "saha": {
+        "password": "asd123",
+        "role": "1",
+        "surname": "",
+        "gorev": "",
+        "imza": null,
+        "asgFiyat": ""
+    }
+}

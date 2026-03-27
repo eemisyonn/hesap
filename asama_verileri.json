@@ -1,0 +1,50 @@
+[
+  {
+    "firma": "adem",
+    "olcum_kodu": "1",
+    "baca": "proses",
+    "personel": "",
+    "asama": 1,
+    "cihazSeri": "M5PMA- 1710",
+    "bacaNo": "1",
+    "ortalamaBacaHizi": "10",
+    "bacaSicakligi": "25",
+    "bacaMutlakBasinci": "100",
+    "nem": "5",
+    "sayacGazSicakligi": "25",
+    "atmosferBasinci": "100",
+    "kayit_tarihi": "2026-01-08 09:42:32"
+  },
+  {
+    "firma": "ATALAY TOKER",
+    "olcum_kodu": "1",
+    "baca": "1",
+    "personel": "",
+    "asama": 1,
+    "cihazSeri": "M5PMA- 1710",
+    "bacaNo": "1",
+    "ortalamaBacaHizi": "10",
+    "bacaSicakligi": "50",
+    "bacaMutlakBasinci": "101.2",
+    "nem": "3",
+    "sayacGazSicakligi": "25",
+    "atmosferBasinci": "100",
+    "kayit_tarihi": "2026-02-19 09:14:36"
+  },
+  {
+    "firma": "KAMURAN OSMAN",
+    "olcum_kodu": "2",
+    "baca": "a",
+    "personel": "",
+    "asama": 1,
+    "cihazSeri": "M5PMA- 1710",
+    "bacaNo": "1",
+    "ortalamaBacaHizi": "10",
+    "bacaSicakligi": "100",
+    "bacaMutlakBasinci": "100.3",
+    "nem": "2",
+    "sayacGazSicakligi": "20.2",
+    "atmosferBasinci": "101.1",
+    "kayit_tarihi": "2026-03-27 14:45:48"
+  }
+]
