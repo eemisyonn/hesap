@@ -1,18 +1,43 @@
 @echo off
+setlocal
 echo ========================================
 echo    HESAP-1 FLY.IO DEPLOY SCRIPT
 echo ========================================
 echo.
 
-REM Proje dizinine git
-cd /d "C:\Users\FOCUSGC\Desktop\AKARE-YAZILIM\HESAP\HESAP-1"
+REM Bat dosyasinin bulundugu proje dizinine git
+cd /d "%~dp0"
+echo Proje dizini: %CD%
+echo.
+
+REM Git kontrol
+git --version >nul 2>nul
+if %errorlevel% neq 0 (
+    echo HATA: Git bulunamadi. Once Git for Windows kur.
+    pause
+    exit /b 1
+)
+
+REM Fly CLI kontrol
+flyctl version >nul 2>nul
+if %errorlevel% neq 0 (
+    echo HATA: flyctl bulunamadi.
+    echo Kurulum: https://fly.io/docs/flyctl/install/
+    pause
+    exit /b 1
+)
 
 REM (İsteğe bağlı) Fly app adını burada belirt; fly.toml'daki app ismi ile aynı olmalı
 set APP_NAME=hesap
 
 echo [1/3] GitHub'a push yapiliyor...
 git add .
-git commit -m "HESAP-1 Deploy: %date% %time%"
+git diff --cached --quiet
+if %errorlevel% equ 0 (
+    echo Commitlenecek degisiklik yok, push denenecek.
+) else (
+    git commit -m "HESAP-1 Deploy: %date% %time%"
+)
 git push origin main
 
 if %errorlevel% neq 0 (
@@ -23,7 +48,7 @@ if %errorlevel% neq 0 (
 
 echo [2/3] Fly.io'ya deploy ediliyor...
 REM flyctl deploy -a %APP_NAME%  --config fly.toml
-flyctl deploy
+flyctl deploy -a %APP_NAME%
 
 if %errorlevel% neq 0 (
     echo HATA: Fly.io deploy basarisiz!
@@ -42,3 +67,4 @@ echo.
 echo Uygulamaniz: https://%APP_NAME%.fly.dev/
 echo.
 pause
+endlocal
