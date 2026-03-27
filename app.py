@@ -11666,6 +11666,7 @@ def generate_eurometric_report(template, asama1_data, asama2_data, asama3_data, 
     
     # Ölçüm için travers sayısını belirle (2. aşamadan - parametre adıyla eşle)
     travers_count = 6
+    parametre_adi = first_parametre.get('parametre', '')
     if asama2_data and asama2_data.get('parametreler'):
         try:
             def _norm(s):
@@ -11676,7 +11677,7 @@ def generate_eurometric_report(template, asama1_data, asama2_data, asama3_data, 
                 s = ' '.join(s.upper().split())
                 return s
 
-            target_name = _norm(parametre)
+            target_name = _norm(parametre_adi)
             params_a2 = asama2_data['parametreler']
             param_a2 = None
             for p in params_a2:
