@@ -2110,7 +2110,7 @@ def delete_asgari_fiyat():
 def load_asgari_fiyatlar():
     """Asgari fiyatları yıllara göre yükler"""
     try:
-        with open('asgari_fiyatlar.json', 'r', encoding='utf-8') as f:
+        with open(data_path('asgari_fiyatlar.json'), 'r', encoding='utf-8') as f:
             return json.load(f)
     except Exception as e:
         print(f"Asgari fiyatlar yüklenirken hata: {e}")
@@ -2635,7 +2635,7 @@ def add_firma_olcum_step2():
             try:
                 # Mevcut baca bilgilerini yükle
                 try:
-                    with open('baca_bilgileri.json', 'r', encoding='utf-8') as f:
+                    with open(data_path('baca_bilgileri.json'), 'r', encoding='utf-8') as f:
                         baca_bilgileri = json.load(f)
                 except (FileNotFoundError, json.JSONDecodeError):
                     baca_bilgileri = []
@@ -2661,7 +2661,7 @@ def add_firma_olcum_step2():
                         baca_bilgileri.append(baca_kayit)
                 
                 # Dosyaya kaydet
-                with open('baca_bilgileri.json', 'w', encoding='utf-8') as f:
+                with open(data_path('baca_bilgileri.json'), 'w', encoding='utf-8') as f:
                     json.dump(baca_bilgileri, f, ensure_ascii=False, indent=2)
                     
             except Exception as e:
@@ -5979,7 +5979,7 @@ def get_baca_parameters():
         if not parameters:
             print(f"Hiç parametre bulunamadı, firma_olcum.json üzerinden aranıyor... Firma={firma}, Ölçüm={olcum_kodu}, Baca={baca_no}")
             try:
-                with open('firma_olcum.json', 'r', encoding='utf-8') as f:
+                with open(data_path('firma_olcum.json'), 'r', encoding='utf-8') as f:
                     firma_kayitlari = json.load(f)
             except FileNotFoundError:
                 firma_kayitlari = []
@@ -6279,7 +6279,7 @@ def save_parametre_table():
             return jsonify({'success': False, 'message': 'Veri bulunamadı'})
         
         # Parametre tablosu verilerini parametre_tablosu.json dosyasına kaydet
-        with open('parametre_tablosu.json', 'w', encoding='utf-8') as f:
+        with open(data_path('parametre_tablosu.json'), 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
         
         return jsonify({'success': True, 'message': 'Parametre tablosu başarıyla kaydedildi'})
@@ -6293,8 +6293,8 @@ def load_parametre_table():
     """Parametre tablosu verilerini yükle"""
     try:
         # parametre_tablosu.json dosyasını oku
-        if os.path.exists('parametre_tablosu.json'):
-            with open('parametre_tablosu.json', 'r', encoding='utf-8') as f:
+        if os.path.exists(data_path('parametre_tablosu.json')):
+            with open(data_path('parametre_tablosu.json'), 'r', encoding='utf-8') as f:
                 data = json.load(f)
             return jsonify({'success': True, 'data': data})
         else:
@@ -6314,7 +6314,7 @@ def save_excel_data():
             return jsonify({'success': False, 'message': 'Veri bulunamadı'})
         
         # Excel verilerini excel_data.json dosyasına kaydet
-        with open('excel_data.json', 'w', encoding='utf-8') as f:
+        with open(data_path('excel_data.json'), 'w', encoding='utf-8') as f:
             json.dump(data['data'], f, ensure_ascii=False, indent=2)
         
         return jsonify({'success': True, 'message': 'Excel verileri başarıyla kaydedildi'})
@@ -6328,8 +6328,8 @@ def load_excel_data():
     """Excel benzeri tablo verilerini yükle"""
     try:
         # excel_data.json dosyasını oku
-        if os.path.exists('excel_data.json'):
-            with open('excel_data.json', 'r', encoding='utf-8') as f:
+        if os.path.exists(data_path('excel_data.json')):
+            with open(data_path('excel_data.json'), 'r', encoding='utf-8') as f:
                 data = json.load(f)
             return jsonify({'success': True, 'data': data, 'excelData': data})
         else:
@@ -6352,7 +6352,7 @@ def save_rapor_table():
         if not payload or 'data' not in payload:
             return jsonify({'success': False, 'message': 'Veri bulunamadı'})
 
-        with open('rapor_table.json', 'w', encoding='utf-8') as f:
+        with open(data_path('rapor_table.json'), 'w', encoding='utf-8') as f:
             json.dump(payload['data'], f, ensure_ascii=False, indent=2)
 
         return jsonify({'success': True, 'message': 'Rapor verileri kaydedildi'})
@@ -6364,8 +6364,8 @@ def save_rapor_table():
 def load_rapor_table():
     """Rapor tablosu verilerini yükle"""
     try:
-        if os.path.exists('rapor_table.json'):
-            with open('rapor_table.json', 'r', encoding='utf-8') as f:
+        if os.path.exists(data_path('rapor_table.json')):
+            with open(data_path('rapor_table.json'), 'r', encoding='utf-8') as f:
                 data = json.load(f)
             return jsonify({'success': True, 'data': data})
         return jsonify({'success': True, 'data': []})
@@ -6391,8 +6391,8 @@ def get_baca_paralar():
     """Baca parametreleri listesini getir (cihaz seri no için)"""
     try:
         # baca_paralar.json dosyasını oku
-        if os.path.exists('baca_paralar.json'):
-            with open('baca_paralar.json', 'r', encoding='utf-8') as f:
+        if os.path.exists(data_path('baca_paralar.json')):
+            with open(data_path('baca_paralar.json'), 'r', encoding='utf-8') as f:
                 data = json.load(f)
             
             # Cihaz Seri parametresini bul
@@ -8521,7 +8521,7 @@ def create_firma_raporu(firma_adi, olcum_kodu):
     """
     try:
         # Şablonu yükle
-        with open('rapor_sablonu.json', 'r', encoding='utf-8') as f:
+        with open(data_path('rapor_sablonu.json'), 'r', encoding='utf-8') as f:
             sablon = json.load(f)
         
         # Verileri yükle
@@ -8544,7 +8544,7 @@ def create_firma_raporu(firma_adi, olcum_kodu):
         # Emisyon formu verilerini yükle
         emisyon_formu = None
         try:
-            with open('forms.json', 'r', encoding='utf-8') as f:
+            with open(data_path('forms.json'), 'r', encoding='utf-8') as f:
                 forms_data = json.load(f)
                 emisyon_formu = next((form for form in forms_data if form['formAdi'] == 'EMİSYON ÖLÇÜM FORMU'), None)
         except Exception as e:
@@ -12427,7 +12427,7 @@ def save_hesaplama_data():
     try:
         data = request.get_json()
         
-        with open('hesaplama_data.json', 'w', encoding='utf-8') as f:
+        with open(data_path('hesaplama_data.json'), 'w', encoding='utf-8') as f:
             json.dump(data['data'], f, ensure_ascii=False, indent=2)
         
         return jsonify({'success': True, 'message': 'Hesaplama verileri kaydedildi'})
@@ -12438,8 +12438,8 @@ def save_hesaplama_data():
 @app.route('/api/load_hesaplama_data', methods=['GET'])
 def load_hesaplama_data():
     try:
-        if os.path.exists('hesaplama_data.json'):
-            with open('hesaplama_data.json', 'r', encoding='utf-8') as f:
+        if os.path.exists(data_path('hesaplama_data.json')):
+            with open(data_path('hesaplama_data.json'), 'r', encoding='utf-8') as f:
                 data = json.load(f)
             return jsonify({'success': True, 'data': data})
         else:
@@ -12488,7 +12488,7 @@ def save_cikti_raporu():
         content = data.get('content', '')
         
         # cikti_raporu.txt dosyasına kaydet
-        with open('cikti_raporu.txt', 'w', encoding='utf-8') as f:
+        with open(data_path('cikti_raporu.txt'), 'w', encoding='utf-8') as f:
             f.write(content)
         
         return jsonify({'success': True, 'message': 'Çıktı raporu kaydedildi'})
@@ -12522,4 +12522,5 @@ if __name__ == '__main__':
             use_reloader=True,
             use_debugger=True
         )
+
 

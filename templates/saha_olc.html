@@ -5640,6 +5640,15 @@ function loadExistingData(firma, olcumKodu, baca) {
     });
 }
 
+// 1. Aşama formunu temizle
+function clearAsama1Form() {
+    const fields = ['cihazSeri', 'bacaNo', 'ortBacaHizi', 'bacaSicakligi', 'bacaSicakligiFark', 'bacaMutlakBasinc', 'nem', 'sayacGazSicakligi', 'atmosferBasinci'];
+    fields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+}
+
 // 1. Aşama formunu doldur
 function fillAsama1Form(data) {
     // Backend'den gelen veri ile frontend field'larını eşleştir
