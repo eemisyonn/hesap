@@ -3,6 +3,41 @@
 {% block title %}SONUCLAR{% endblock %}
 
 {% block content %}
+<style>
+#sonuclarTable th,
+#sonuclarTable td {
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .sonuclar-table-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #sonuclarTable {
+        min-width: 1150px;
+    }
+
+    #sonuclarTable th.sonuc-islem-col,
+    #sonuclarTable td.sonuc-islem-col {
+        position: sticky;
+        right: 0;
+        z-index: 3;
+        background: #fff;
+        min-width: 96px;
+    }
+
+    #sonuclarTable thead th.sonuc-islem-col {
+        background: #e9ecef;
+        z-index: 4;
+    }
+
+    .sonuc-islem-buttons .btn {
+        padding: 0.15rem 0.35rem;
+    }
+}
+</style>
 <div class="container-fluid mt-4">
     <div class="row">
         <div class="col-12">
@@ -21,7 +56,7 @@
                     {% endif %}
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive">
+                    <div class="table-responsive sonuclar-table-wrap">
                         <table id="sonuclarTable" class="table table-sm table-bordered table-hover align-middle">
                             <thead class="table-light">
                                 <tr>
@@ -41,7 +76,7 @@
                                     <th scope="col">CIHAZ NO</th>
                                     <th scope="col">OLCUM TARIHI</th>
                                     <th scope="col" class="text-center" style="width: 140px;">OLCUMLER</th>
-                                    <th scope="col" class="text-center" style="width: 180px;">ISLEM</th>
+                                    <th scope="col" class="text-center sonuc-islem-col" style="width: 180px;">ISLEM</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -84,8 +119,8 @@
                                                     </a>
                                                 </div>
                                             </td>
-                                            <td class="text-center">
-                                                <div class="btn-group btn-group-sm" role="group" aria-label="Islem">
+                                            <td class="text-center sonuc-islem-col">
+                                                <div class="btn-group btn-group-sm sonuc-islem-buttons" role="group" aria-label="Islem">
                                                     {% if role in ['3', 'admin'] %}
                                                     <a class="btn btn-outline-primary" title="Kaydı düzenle"
                                                        href="{{ url_for('saha_olc') }}?edit=1&stage=3&firma={{ rec.firma | urlencode }}&olcum_kodu={{ rec.olcum_kodu | urlencode }}&baca={{ rec.baca | urlencode }}">
