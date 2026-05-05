@@ -1,23 +1,31 @@
-app = "hesap" # Gerekirse Fly.io'daki gerçek app adınla değiştir
-primary_region = "ams" # Uygulamanın çalışacağı bölge (örnek: ams, fra, iad)
+# fly.toml app configuration file generated for hesap-bw-wyg on 2026-05-05T09:43:00Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'hesap-bw-wyg'
+primary_region = 'ams'
 
 [build]
-  dockerfile = "Dockerfile"
+  dockerfile = 'Dockerfile'
 
 [env]
-  # JSON verilerinin tutulacağı kalıcı klasör
-  DATA_DIR = "/data"
-  # İç servis portu (Docker'da gunicorn 8080'de dinleyecek)
-  PORT = "8080"
+  DATA_DIR = '/data'
+  PORT = '8080'
+
+[[mounts]]
+  source = 'data'
+  destination = '/data'
 
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = true
+  auto_stop_machines = 'stop'
   auto_start_machines = true
   min_machines_running = 0
 
-[mounts]
-  # Daha sonra fly volumes create data --region ams komutuyla oluşturacağın volume ismi
-  source = "data"
-  destination = "/data"
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
+  memory_mb = 256
