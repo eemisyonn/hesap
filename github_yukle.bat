@@ -1,8 +1,8 @@
 @echo off
-setlocal
+setlocal EnableExtensions EnableDelayedExpansion
 
 echo ========================================
-echo        GITHUB TEK TIK YUKLEME
+echo   GITHUB TEK TIK GUNCELLEME VE PUSH
 echo ========================================
 echo.
 
@@ -13,85 +13,96 @@ echo.
 
 REM Git kurulu mu kontrol et
 git --version >nul 2>nul
-if %errorlevel% neq 0 (
+if errorlevel 1 (
     echo HATA: Git kurulu degil veya PATH'e ekli degil.
-    echo https://git-scm.com/download/win adresinden Git for Windows kur.
+    echo https://git-scm.com/download/win adresinden Git for Windows kurun.
     pause
     exit /b 1
 )
 
-REM Repo URL (senin ekranindaki repo)
-set REPO_URL=https://github.com/aadem1983/hesap.git
-set REPO_OWNER=aadem1983
-
-REM Git deposu yoksa baslat
-if not exist ".git" (
-    echo [1/7] Git deposu baslatiliyor...
+REM Git deposu degilse baslat
+git rev-parse --is-inside-work-tree >nul 2>nul
+if errorlevel 1 (
+    echo Git deposu bulunamadi, yeni depo baslatiliyor...
     git init
+    if errorlevel 1 (
+        echo HATA: git init basarisiz oldu.
+        pause
+        exit /b 1
+    )
 )
 
 REM Kullanici bilgileri ayarli mi kontrol et
-for /f "delims=" %%i in ('git config --get user.name') do set GIT_USER_NAME=%%i
-for /f "delims=" %%i in ('git config --get user.email') do set GIT_USER_EMAIL=%%i
+for /f "delims=" %%i in ('git config --get user.name') do set "GIT_USER_NAME=%%i"
+for /f "delims=" %%i in ('git config --get user.email') do set "GIT_USER_EMAIL=%%i"
 
 if "%GIT_USER_NAME%"=="" (
-    set /p GIT_USER_NAME=GitHub kullanici adini gir: 
-    git config user.name "%GIT_USER_NAME%"
+    set /p GIT_USER_NAME=Git user.name girin: 
+    if not "%GIT_USER_NAME%"=="" git config user.name "%GIT_USER_NAME%"
 )
 
 if "%GIT_USER_EMAIL%"=="" (
-    set /p GIT_USER_EMAIL=GitHub email adresini gir: 
-    git config user.email "%GIT_USER_EMAIL%"
+    set /p GIT_USER_EMAIL=Git user.email girin: 
+    if not "%GIT_USER_EMAIL%"=="" git config user.email "%GIT_USER_EMAIL%"
 )
 
-echo [2/7] Dosyalar eklendi...
-git add .
+set "TARGET_BRANCH=main"
+echo [1/4] Dosyalar ekleniyor...
 
-REM Bos commit hatasini engelle
+REM Takip edilen degisiklikleri ekle
+git add -u
+
+REM Yeni dosyalari tek tek ekle (sorunlu girdiler atlanir)
+for /f "delims=" %%F in ('git ls-files --others --exclude-standard') do (
+    git add -- "%%F" >nul 2>nul
+    if errorlevel 1 (
+        echo UYARI: Eklenemedi, atlandi: %%F
+    )
+)
+
+echo [2/4] Commit kontrolu...
 git diff --cached --quiet
-if %errorlevel% equ 0 (
-    echo [3/7] Commitlenecek degisiklik yok, push denenecek.
+if errorlevel 1 (
+    for /f "delims=" %%i in ('powershell -NoProfile -Command "Get-Date -Format ''yyyy-MM-dd HH:mm:ss''"') do set "NOW=%%i"
+    if "%NOW%"=="" set "NOW=%date% %time%"
+    git commit -m "Auto update %NOW%"
+    if errorlevel 1 (
+        echo HATA: Commit olusturulamadi.
+        pause
+        exit /b 1
+    )
 ) else (
-    echo [3/7] Commit olusturuluyor...
-    git commit -m "Deploy: %date% %time%"
+    echo Commitlenecek yeni degisiklik yok.
 )
 
-echo [4/7] Ana dal main yapiliyor...
-git branch -M main
+echo [3/4] Branch ve remote kontrolu...
+git branch -M %TARGET_BRANCH%
 
-echo [5/7] Uzak depo (origin) ayarlaniyor...
 git remote get-url origin >nul 2>nul
-if %errorlevel% neq 0 (
-    git remote add origin %REPO_URL%
+if errorlevel 1 (
+    set /p REPO_URL=GitHub repo URL girin (https://github.com/kullanici/repo.git): 
+    if "%REPO_URL%"=="" (
+        echo HATA: Uzak repo URL bos birakildi.
+        pause
+        exit /b 1
+    )
+    git remote add origin "%REPO_URL%"
 ) else (
-    git remote set-url origin %REPO_URL%
+    for /f "delims=" %%i in ('git remote get-url origin') do set "REPO_URL=%%i"
 )
 
-echo [6/7] GitHub'a gonderiliyor...
-git push -u origin main > "%TEMP%\github_push_log.txt" 2>&1
-if %errorlevel% neq 0 (
+echo [4/4] GitHub'a gonderiliyor...
+git push -u origin %TARGET_BRANCH%
+if errorlevel 1 (
     echo.
     echo HATA: Push basarisiz oldu.
-    type "%TEMP%\github_push_log.txt"
-    findstr /i "403 denied" "%TEMP%\github_push_log.txt" >nul
-    if %errorlevel% equ 0 (
-        echo.
-        echo Muhtemel neden: Yanlis GitHub hesabi ile giris yapildi.
-        echo Bu repo sahibi: %REPO_OWNER%
-        echo Su adimlari uygula:
-        echo 1^) Windows Credential Manager'dan github.com kaydini sil.
-        echo 2^) Tekrar calistirinca dogru hesapla (%REPO_OWNER%) giris yap.
-        echo 3^) Gerekirse GitHub PAT kullan.
-    ) else (
-        echo Not: Ilk seferde GitHub girisi veya token isteyebilir.
-    )
+    echo Not: Tarayici kimlik dogrulamasi acilabilir, tekrar deneyin.
     pause
     exit /b 1
 )
 
-echo [7/7] Tamamlandi.
-echo Repo: %REPO_URL%
 echo.
-echo Basarili: Proje GitHub'a yuklendi.
+echo BASARILI: Degisiklikler GitHub'a yuklendi.
+echo Repo: !REPO_URL!
 pause
 endlocal

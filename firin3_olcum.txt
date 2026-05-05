@@ -1,0 +1,40 @@
+
+         AKARE CEVRE LAB.
+         Korfez - Kocaeli
+        +90 262 528 84 46
+       www.akarecevre.com
+
+
+   SAL 24.03.2026       10:27:41
+
+
+      Dogal gaz          11.9 %
+
+      Program 1
+
+      Gaz sicakligi [°C]    101.9
+      Hava sicaklik [°C]     13.1
+      O2 [%]                  9.74
+      CO [ppm]             1206
+      NO [ppm]              263
+      NOx [ppm]             277
+      SO2 [ppm]               0
+      CO [mg/m³@10%O2]     1470
+      NO [mg/m³@10%O2]      344
+      NOx [mg/m³@10%O2]     554
+      SO2 [mg/m³@10%O2]       0
+      CO2 [%]                 6.4
+      Verim ncv [%]          94.0
+
+      Konum No.:
+
+
+ ------------------------------------------------
+
+ MRU NOVAplus RCU        002945
+ Yazilim Versiyonu      V1.24.40
+
+ ------------------------------------------------
+
+ MRU NOVAplus            002998
+ Yazilim Versiyonu      V1.23.14
