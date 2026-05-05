@@ -7,16 +7,27 @@
     <div class="row">
         <div class="col-12">
             <div class="card border-0 shadow-sm">
-                <div class="card-header bg-secondary text-white">
+                <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <h4 class="mb-0">
                         <i class="fas fa-list-alt me-2"></i>SONUCLAR
                     </h4>
+                    {% if role in ['3', 'admin'] %}
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-light text-dark">Seçili: <span id="selectedSonucCount">0</span></span>
+                        <button type="button" id="bulkDeleteSonucBtn" class="btn btn-sm btn-outline-light" onclick="deleteSelectedSonuclar()" disabled>
+                            <i class="fas fa-trash me-1"></i>Seçiliyi Sil
+                        </button>
+                    </div>
+                    {% endif %}
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-sm table-bordered table-hover align-middle">
+                        <table id="sonuclarTable" class="table table-sm table-bordered table-hover align-middle">
                             <thead class="table-light">
                                 <tr>
+                                    <th scope="col" class="text-center" style="width: 50px;">
+                                        <input type="checkbox" id="selectAllSonuclar" onclick="toggleSelectAllSonuclar(this)">
+                                    </th>
                                     <th scope="col" class="text-center" style="width: 60px;">SIRA</th>
                                     <th scope="col">FIRMA</th>
                                     <th scope="col">OLCUM KOD</th>
@@ -30,12 +41,16 @@
                                     <th scope="col">CIHAZ NO</th>
                                     <th scope="col">OLCUM TARIHI</th>
                                     <th scope="col" class="text-center" style="width: 140px;">OLCUMLER</th>
+                                    <th scope="col" class="text-center" style="width: 180px;">ISLEM</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% if sonuc_kayitlari and sonuc_kayitlari|length > 0 %}
                                     {% for rec in sonuc_kayitlari %}
-                                        <tr>
+                                        <tr data-firma="{{ rec.firma }}" data-olcum-kodu="{{ rec.olcum_kodu }}" data-baca="{{ rec.baca }}">
+                                            <td class="text-center">
+                                                <input type="checkbox" class="sonuc-row-select" onchange="onSonucRowSelectionChange()">
+                                            </td>
                                             <td class="text-center">{{ rec.sira }}</td>
                                             <td>{{ rec.firma }}</td>
                                             <td>{{ rec.olcum_kodu }}</td>
@@ -69,11 +84,27 @@
                                                     </a>
                                                 </div>
                                             </td>
+                                            <td class="text-center">
+                                                <div class="btn-group btn-group-sm" role="group" aria-label="Islem">
+                                                    {% if role in ['3', 'admin'] %}
+                                                    <a class="btn btn-outline-primary" title="Kaydı düzenle"
+                                                       href="{{ url_for('saha_olc') }}?edit=1&stage=3&firma={{ rec.firma | urlencode }}&olcum_kodu={{ rec.olcum_kodu | urlencode }}&baca={{ rec.baca | urlencode }}">
+                                                        <i class="fas fa-pen"></i>
+                                                    </a>
+                                                    <button type="button" class="btn btn-outline-danger" title="Kaydı sil"
+                                                            onclick='deleteSonucKaydi({{ rec.firma | tojson }}, {{ rec.olcum_kodu | tojson }}, {{ rec.baca | tojson }});'>
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                    {% else %}
+                                                    <span class="text-muted">-</span>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
                                         </tr>
                                     {% endfor %}
                                 {% else %}
                                     <tr>
-                                        <td colspan="9" class="text-center text-muted py-4">
+                                        <td colspan="15" class="text-center text-muted py-4">
                                             Gösterilecek sonuç bulunamadı. Önce 3. aşama ölçüm verilerini kaydedin.
                                         </td>
                                     </tr>
@@ -90,4 +121,139 @@
 
 {% block scripts %}
 {{ super() }}
+<script>
+function normalizeText(value) {
+    return String(value || '').trim();
+}
+
+function getSelectedSonucRows() {
+    const checkboxes = document.querySelectorAll('.sonuc-row-select:checked');
+    return Array.from(checkboxes).map(cb => cb.closest('tr')).filter(Boolean);
+}
+
+function getSelectedSonucRecords() {
+    const rows = getSelectedSonucRows();
+    const map = new Map();
+
+    rows.forEach(row => {
+        const firma = normalizeText(row.getAttribute('data-firma'));
+        const olcumKodu = normalizeText(row.getAttribute('data-olcum-kodu'));
+        const baca = normalizeText(row.getAttribute('data-baca'));
+        if (!firma || !olcumKodu || !baca) return;
+
+        const key = `${firma}|||${olcumKodu}|||${baca}`;
+        if (!map.has(key)) {
+            map.set(key, {
+                firma: firma,
+                olcum_kodu: olcumKodu,
+                baca: baca,
+            });
+        }
+    });
+
+    return Array.from(map.values());
+}
+
+function updateSonucSelectionUI() {
+    const selectedCount = getSelectedSonucRows().length;
+    const countEl = document.getElementById('selectedSonucCount');
+    const bulkDeleteBtn = document.getElementById('bulkDeleteSonucBtn');
+    const selectAll = document.getElementById('selectAllSonuclar');
+    const allCheckboxes = document.querySelectorAll('.sonuc-row-select');
+
+    if (countEl) countEl.textContent = String(selectedCount);
+    if (bulkDeleteBtn) bulkDeleteBtn.disabled = selectedCount === 0;
+
+    if (selectAll) {
+        const total = allCheckboxes.length;
+        const checked = Array.from(allCheckboxes).filter(cb => cb.checked).length;
+        selectAll.checked = total > 0 && total === checked;
+    }
+}
+
+function toggleSelectAllSonuclar(master) {
+    const allCheckboxes = document.querySelectorAll('.sonuc-row-select');
+    allCheckboxes.forEach(cb => {
+        cb.checked = master.checked;
+    });
+    updateSonucSelectionUI();
+}
+
+function onSonucRowSelectionChange() {
+    updateSonucSelectionUI();
+}
+
+function deleteSonucKaydi(firma, olcumKodu, baca) {
+    const rec = {
+        firma: normalizeText(firma),
+        olcum_kodu: normalizeText(olcumKodu),
+        baca: normalizeText(baca),
+    };
+
+    if (!rec.firma || !rec.olcum_kodu || !rec.baca) {
+        alert('Silinecek kayıt bilgileri eksik.');
+        return;
+    }
+
+    const onay = confirm(`${rec.firma} / ${rec.olcum_kodu} / ${rec.baca} kaydı ve ilgili aşamalar silinsin mi?`);
+    if (!onay) return;
+
+    fetch('/api/saha_olcumleri/bulk_delete', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ records: [rec] })
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (!result.success) {
+            alert(result.message || result.error || 'Silme işlemi başarısız.');
+            return;
+        }
+        alert(result.message || 'Kayıt silindi.');
+        location.reload();
+    })
+    .catch(error => {
+        console.error('Kayıt silme hatası:', error);
+        alert('Silme sırasında beklenmeyen bir hata oluştu.');
+    });
+}
+
+function deleteSelectedSonuclar() {
+    const records = getSelectedSonucRecords();
+    if (!records.length) {
+        alert('Lütfen en az bir kayıt seçin.');
+        return;
+    }
+
+    const onay = confirm(`Seçili ${records.length} kayıt ve ilgili aşama verileri silinsin mi?`);
+    if (!onay) return;
+
+    fetch('/api/saha_olcumleri/bulk_delete', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ records: records })
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (!result.success) {
+            alert(result.message || result.error || 'Toplu silme işlemi başarısız.');
+            return;
+        }
+        alert(result.message || 'Seçili kayıtlar silindi.');
+        location.reload();
+    })
+    .catch(error => {
+        console.error('Toplu silme hatası:', error);
+        alert('Toplu silme sırasında beklenmeyen bir hata oluştu.');
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    updateSonucSelectionUI();
+});
+</script>
 {% endblock %}

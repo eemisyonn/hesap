@@ -31,6 +31,13 @@
             <div class="alert alert-danger">{{ error }}</div>
         {% endif %}
         <form method="post">
+            <div class="mb-3">
+                <label for="olcum_tipi" class="form-label fw-semibold text-muted small">Ölçüm Tipi</label>
+                <select class="form-select" id="olcum_tipi" name="olcum_tipi" required>
+                    <option value="direk_olcum" {% if request.form.get('olcum_tipi') == 'direk_olcum' or not request.form.get('olcum_tipi') %}selected{% endif %}>DİREK ÖLÇÜM</option>
+                    <option value="firma_kayit" {% if request.form.get('olcum_tipi') == 'firma_kayit' %}selected{% endif %}>FİRMA KAYIT</option>
+                </select>
+            </div>
             <div class="form-floating mb-3">
                 <input type="text" class="form-control" id="username" name="username" placeholder="Kullanıcı Adı" required>
                 <label for="username">Kullanıcı Adı</label>

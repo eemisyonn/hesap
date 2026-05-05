@@ -719,11 +719,15 @@ def login():
             session['logged_in'] = True
             session['username'] = original_username  # Orijinal kullanıcı adını kullan
             session['role'] = user.get('role')
+            olcum_tipi = request.form.get('olcum_tipi', 'firma_kayit')
+            session['olcum_tipi'] = olcum_tipi
             if original_username != 'admin':
                 access_info = load_access_code() or {}
                 session['access_code_code'] = str(access_info.get('code') or '').strip()
             else:
                 session.pop('access_code_code', None)
+            if olcum_tipi == 'direk_olcum':
+                return redirect(url_for('saha_olc'))
             return redirect(url_for('index'))
 
         if not error:
@@ -2928,10 +2932,12 @@ def saha_olc():
     
     # Özet tablo için firma/ölçüm/baca bazında gruplanmış kayıtlar
     saha_olcumler = get_saha_olcum_summary()
+    olcum_tipi = session.get('olcum_tipi', 'firma_kayit')
     response = make_response(render_template('saha_olc.html', 
                          username=session.get('username'), 
                          role=session.get('role'),
-                         saha_olcumler=saha_olcumler))
+                         saha_olcumler=saha_olcumler,
+                         olcum_tipi=olcum_tipi))
     
     # Cache'i tamamen devre dışı bırak - Her zaman yeni dosya yüklesin
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
@@ -4551,27 +4557,58 @@ def api_bulk_delete_saha_olcumleri():
     try:
         data = request.get_json() or {}
         ids = data.get('ids', [])
+        records = data.get('records', [])
 
-        if not ids:
+        if not ids and not records:
             return jsonify({'success': False, 'message': 'Silinecek kayıt seçilmedi'})
 
-        id_set = {str(i) for i in ids}
+        def _norm(v):
+            return str(v or '').strip()
+
+        id_set = {_norm(i) for i in ids if _norm(i)}
+
+        # records ile gelen firma/ölçüm/baca kombinasyonlarını hedefe ekle
+        record_targets = []
+        record_combo_set = set()
+        if isinstance(records, list):
+            for rec in records:
+                if not isinstance(rec, dict):
+                    continue
+                firma = _norm(rec.get('firma'))
+                olcum_kodu = _norm(rec.get('olcum_kodu') or rec.get('olcumKodu'))
+                baca = _norm(rec.get('baca') or rec.get('baca_adi') or rec.get('bacaNo'))
+                parametre = _norm(rec.get('parametre') or rec.get('parametre_adi'))
+
+                if not firma or not olcum_kodu or not baca:
+                    continue
+
+                record_targets.append({
+                    'firma': firma,
+                    'olcum_kodu': olcum_kodu,
+                    'baca': baca,
+                    'parametre': parametre,
+                })
+                record_combo_set.add((firma, olcum_kodu, baca))
 
         # 1) Baca bilgileri (özet kayıtlar)
         baca_bilgileri = load_baca_bilgileri()
-        targets = []  # Sonraki aşamalar için firma/ölçüm/baca/parametre kombinasyonları
+        targets = list(record_targets)  # Sonraki aşamalar için firma/ölçüm/baca/parametre kombinasyonları
         remaining_baca = []
 
         for rec in baca_bilgileri:
             rec_id = rec.get('id')
             rec_id_str = str(rec_id) if rec_id is not None else None
 
-            if rec_id_str and rec_id_str in id_set:
-                firma = (rec.get('firma_adi') or rec.get('firma') or '').strip()
-                olcum_kodu = (rec.get('olcum_kodu') or '').strip()
-                baca = (rec.get('baca_adi') or rec.get('baca_no') or '').strip()
-                parametre = (rec.get('parametre_adi') or rec.get('parametre') or '').strip()
+            firma = (rec.get('firma_adi') or rec.get('firma') or '').strip()
+            olcum_kodu = (rec.get('olcum_kodu') or '').strip()
+            baca = (rec.get('baca_adi') or rec.get('baca_no') or '').strip()
+            parametre = (rec.get('parametre_adi') or rec.get('parametre') or '').strip()
 
+            rec_combo = (firma, olcum_kodu, baca)
+            delete_by_id = bool(rec_id_str and rec_id_str in id_set)
+            delete_by_combo = rec_combo in record_combo_set
+
+            if delete_by_id or delete_by_combo:
                 targets.append({
                     'firma': firma,
                     'olcum_kodu': olcum_kodu,
@@ -4582,21 +4619,17 @@ def api_bulk_delete_saha_olcumleri():
                 remaining_baca.append(rec)
 
         deleted_baca = len(baca_bilgileri) - len(remaining_baca)
-        save_baca_bilgileri(remaining_baca)
+        if deleted_baca:
+            save_baca_bilgileri(remaining_baca)
 
         if not targets:
-            return jsonify({'success': False, 'message': 'Seçilen ID\'lere ait kayıt bulunamadı'}), 404
+            return jsonify({'success': False, 'message': 'Seçilen kayıtlara ait veri bulunamadı'}), 404
 
         # Ortak anahtar kümeleri
         combo_set = {
             (t['firma'], t['olcum_kodu'], t['baca'])
             for t in targets
         }
-        param_combo_set = {
-            (t['firma'], t['olcum_kodu'], t['baca'], t['parametre'])
-            for t in targets if t['parametre']
-        }
-
         def load_json_list(path):
             if not os.path.exists(path):
                 return []
@@ -4672,9 +4705,8 @@ def api_bulk_delete_saha_olcumleri():
             if (
                 ( (r.get('firma_adi') or r.get('firma') or '').strip(),
                   (r.get('olcum_kodu') or '').strip(),
-                  (r.get('baca_adi') or r.get('baca_no') or r.get('baca') or '').strip(),
-                  (r.get('parametre_adi') or r.get('parametre') or '').strip() )
-                not in param_combo_set
+                                    (r.get('baca_adi') or r.get('baca_no') or r.get('baca') or '').strip() )
+                                not in combo_set
             )
         ]
         deleted_param = before_param - len(parametre_olcumleri)
@@ -5928,6 +5960,58 @@ def get_latest_asama_data():
     except Exception as e:
         print(f"Aşama verisi getirilirken hata: {e}")
         return jsonify({'success': False, 'message': f'Veri getirme hatası: {str(e)}'}), 500
+
+@app.route('/api/baca_list_all')
+def get_baca_list_all():
+    """Tüm baca numaralarını ve parametrelerini döndürür (Direk Ölçüm modu için)."""
+    try:
+        baca_bilgileri_path = data_path('baca_bilgileri.json')
+        try:
+            with open(baca_bilgileri_path, 'r', encoding='utf-8') as f:
+                baca_bilgileri = json.load(f)
+        except FileNotFoundError:
+            baca_bilgileri = []
+        # Benzersiz baca numaraları
+        bacalar = sorted(set(str(r.get('baca_no', '')).strip() for r in baca_bilgileri if r.get('baca_no')))
+        return jsonify({'success': True, 'bacalar': bacalar})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/all_parameter_names')
+def get_all_parameter_names():
+    """Tüm parametre adlarını döndürür (Direk Ölçüm fallback için)."""
+    try:
+        parametreler = load_parameters()
+        names = sorted(set(
+            p.get('Parametre Adı', '').strip()
+            for p in parametreler
+            if p.get('Parametre Adı', '').strip()
+        ))
+        return jsonify({'success': True, 'parameters': names})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/baca_parameters_by_no')
+def get_baca_parameters_by_no():
+    """Sadece baca_no ile parametreleri getirir (Direk Ölçüm modu için)."""
+    try:
+        baca_no = request.args.get('baca_no', '').strip()
+        if not baca_no:
+            return jsonify({'success': False, 'message': 'Baca numarası gerekli'}), 400
+        baca_bilgileri_path = data_path('baca_bilgileri.json')
+        try:
+            with open(baca_bilgileri_path, 'r', encoding='utf-8') as f:
+                baca_bilgileri = json.load(f)
+        except FileNotFoundError:
+            baca_bilgileri = []
+        parameters = list(set(
+            r.get('parametre', '').strip()
+            for r in baca_bilgileri
+            if str(r.get('baca_no', '')).strip().upper() == baca_no.upper() and r.get('parametre', '').strip()
+        ))
+        return jsonify({'success': True, 'parameters': parameters})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/baca_parameters')
 def get_baca_parameters():

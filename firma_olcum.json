@@ -33,5 +33,22 @@
         },
         "notlar": "",
         "olusturma_tarihi": "2026-03-27T14:03:07.151233"
+    },
+    {
+        "id": "4d4cbd02-6d5b-4ea9-a04e-0c09552a0961",
+        "firma_adi": "adem",
+        "olcum_kodu": "11",
+        "baslangic_tarihi": "2026-05-11",
+        "bitis_tarihi": "2026-05-19",
+        "durum": "Aktif",
+        "personel": [],
+        "baca_sayisi": "1",
+        "baca_parametreleri": {
+            "1": [
+                "Toz_EPA5"
+            ]
+        },
+        "notlar": "",
+        "olusturma_tarihi": "2026-05-04T18:43:35.147299"
     }
 ]

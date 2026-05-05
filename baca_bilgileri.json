@@ -18,5 +18,15 @@
         "personel_adi": "",
         "kayit_tarihi": "2026-03-27T14:03:07.153233",
         "id": "bb0e1a57-4719-4dd6-9542-6e86a97d8d80"
+    },
+    {
+        "firma_adi": "adem",
+        "olcum_kodu": "11",
+        "baca_no": "1",
+        "baca_adi": "1",
+        "parametre": "Toz_EPA5",
+        "personel_adi": "",
+        "kayit_tarihi": "2026-05-04T18:43:35.150353",
+        "id": "fde7c381-bd9d-4c3b-9ad3-12cf86ba29dc"
     }
 ]

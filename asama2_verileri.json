@@ -23,5 +23,104 @@
       }
     ],
     "kayit_tarihi": "2026-03-27 14:45:52"
+  },
+  {
+    "firma": "adem",
+    "olcum_kodu": "1",
+    "baca": "a",
+    "personel": "",
+    "asama": 2,
+    "parametreler": [],
+    "kayit_tarihi": "2026-05-04 20:59:20"
+  },
+  {
+    "firma": "",
+    "olcum_kodu": "",
+    "baca": "1",
+    "personel": "",
+    "asama": 2,
+    "parametreler": [
+      {
+        "parametre": "Toz_EPA5\n                \n                    \n                    Hız: 5 m/s | Sıcaklık: 280 °C | Basınç: 100 kPa | Nem: 3% | Atmosfer: 99 kPa | Seri: M5PMA- 1710",
+        "baslangic": "07/05/26 00:00",
+        "ayarlananSure": "6000.0",
+        "traversSayisi": "10",
+        "nozzleCapi": "10",
+        "sure": "600",
+        "sayacHacmi": "2356.2",
+        "ortVakumDebi": "23.6",
+        "olcum1Bitis": "07/05/26 01:40",
+        "olcum2Baslangic": "07/05/26 01:50",
+        "olcum2Bitis": "07/05/26 03:30",
+        "olcum3Baslangic": "07/05/26 03:41",
+        "olcum3Bitis": "07/05/26 05:21"
+      }
+    ],
+    "kayit_tarihi": "2026-05-04 21:58:03"
+  },
+  {
+    "firma": "3",
+    "olcum_kodu": "",
+    "baca": "3",
+    "personel": "",
+    "asama": 2,
+    "parametreler": [
+      {
+        "parametre": "Toz_EPA5\n                \n                    \n                    Hız: 5 m/s | Sıcaklık: 280 °C | Basınç: 99.63 kPa | Nem: 3% | Atmosfer: 99.5 kPa | Seri: M5PMA- 1710",
+        "baslangic": "04/05/26 23:51",
+        "ayarlananSure": "6000.0",
+        "traversSayisi": "10",
+        "nozzleCapi": "10",
+        "sure": "600",
+        "sayacHacmi": "2356.2",
+        "ortVakumDebi": "23.6",
+        "olcum1Bitis": "05/05/26 01:31",
+        "olcum2Baslangic": "05/05/26 01:41",
+        "olcum2Bitis": "05/05/26 03:21",
+        "olcum3Baslangic": "05/05/26 03:28",
+        "olcum3Bitis": "05/05/26 05:08"
+      }
+    ],
+    "kayit_tarihi": "2026-05-04 21:50:36"
+  },
+  {
+    "firma": "KRO",
+    "olcum_kodu": "1-1",
+    "baca": "1",
+    "personel": "",
+    "asama": 2,
+    "parametreler": [
+      {
+        "parametre": "Toz_EPA5\n                \n                    \n                    Hız: 5 m/s | Sıcaklık: 280 °C | Basınç: 100 kPa | Nem: 3% | Atmosfer: 99 kPa | Seri: M5PMA- 1710",
+        "baslangic": "09/05/26 00:07",
+        "ayarlananSure": "6000.0",
+        "traversSayisi": "10",
+        "nozzleCapi": "10",
+        "sure": "600",
+        "sayacHacmi": "2356.2",
+        "ortVakumDebi": "23.6"
+      }
+    ],
+    "kayit_tarihi": "2026-05-04 22:06:19"
+  },
+  {
+    "firma": "ADEM",
+    "olcum_kodu": "1",
+    "baca": "1",
+    "personel": "",
+    "asama": 2,
+    "parametreler": [
+      {
+        "parametre": "Toz_EPA5\n                \n                    \n                    Hız: 5 m/s | Sıcaklık: 280 °C | Basınç: 99 kPa | Nem: 3% | Atmosfer: 98 kPa | Seri: M5PMA- 1710",
+        "baslangic": "05/05/26 12:57",
+        "ayarlananSure": "6000.0",
+        "traversSayisi": "10",
+        "nozzleCapi": "10",
+        "sure": "600",
+        "sayacHacmi": "2356.2",
+        "ortVakumDebi": "23.6"
+      }
+    ],
+    "kayit_tarihi": "2026-05-05 11:56:21"
   }
 ]

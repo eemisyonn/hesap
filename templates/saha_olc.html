@@ -275,6 +275,27 @@
     font-size: 0.75rem;
     padding: 0.15rem 0.45rem;
 }
+
+/* Sonuçlardan düzenleme modunda ekranı sadeleştir */
+body.edit-compact-mode #kayitliOlcumlerKarti {
+    display: none !important;
+}
+
+body.edit-compact-mode #filtreBolumu {
+    margin-bottom: 0.5rem !important;
+}
+
+body.edit-compact-mode #filtreBolumu .btn {
+    padding: 0.2rem 0.45rem;
+    font-size: 0.75rem;
+}
+
+body.edit-compact-mode #asama1Form,
+body.edit-compact-mode #asama2Form,
+body.edit-compact-mode #asama3Form,
+body.edit-compact-mode #asama4Form {
+    margin-bottom: 0.75rem !important;
+}
 </style>
 <div class="container-fluid">
     <div class="row">
@@ -296,8 +317,8 @@
                         <!-- SAHA ÖLÇÜM Tab İçeriği -->
                         <div class="tab-pane fade show active" id="ana-content" role="tabpanel" aria-labelledby="ana-tab">
                     
-                    <!-- Filtreleme Dropdown'ları -->
-                    <div class="row mb-3">
+                    <!-- Filtreleme Dropdown'ları - Direk Ölçüm modunda gizlenir -->
+                    <div class="row mb-3" id="filtreBolumu" {% if olcum_tipi == 'direk_olcum' %}style="display:none;"{% endif %}>
                         <div class="col-md-2">
                             <label for="firmaSelect" class="form-label">Firma Seçin</label>
                             <div class="input-group input-group-sm">
@@ -368,8 +389,9 @@
                     </div>
 
                     <input type="hidden" id="personelSelect" value="">
+                    <input type="hidden" id="olcumTipiData" value="{{ olcum_tipi }}">
 
-                    <div class="card mb-3">
+                    <div class="card mb-3" id="kayitliOlcumlerKarti" {% if olcum_tipi == 'direk_olcum' %}style="display:none;"{% endif %}>
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">
                                 <i class="fas fa-list me-2"></i>Kayıtlı Saha Ölçümleri
@@ -465,6 +487,23 @@
                             </h5>
                         </div>
                         <div class="card-body">
+                                {% if olcum_tipi == 'direk_olcum' %}
+                                <!-- Direk Ölçüm: Firma ve Baca Adı elle giriş -->
+                                <div class="row mb-3 p-2 rounded" style="background:#f0fff4; border:1px solid #28a745;">
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold">Firma Adı:</label>
+                                        <input type="text" class="form-control" id="direkFirmaAdi" placeholder="Firma adını yazın...">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold">Baca Adı / Ölçüm Yeri:</label>
+                                        <input type="text" class="form-control" id="direkBacaAdi" placeholder="Baca adı veya ölçüm yeri...">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold">Ölçüm Kodu:</label>
+                                        <input type="text" class="form-control" id="direkOlcumKodu" placeholder="Ölçüm kodu...">
+                                    </div>
+                                </div>
+                                {% endif %}
                                 <div class="row">
                                 <div class="col-md-3">
                                     <label class="form-label">Cihaz Seri No:</label>
@@ -475,6 +514,14 @@
                                 <div class="col-md-3">
                                     <label class="form-label">Baca No:</label>
                                     <input type="text" class="form-control" id="bacaNo" placeholder="Baca numarası">
+                                    {% if olcum_tipi == 'direk_olcum' %}
+                                    <!-- Direk Ölçüm modunda baca seçici -->
+                                    <div class="mt-1">
+                                        <select class="form-select form-select-sm" id="direkBacaSelect" onchange="onDirekBacaChange(this.value)">
+                                            <option value="">-- Baca Seç (Parametreler için) --</option>
+                                        </select>
+                                    </div>
+                                    {% endif %}
                                     </div>
                                 <div class="col-md-3">
                                     <label class="form-label">Ortalama Baca Hızı (m/s):</label>
@@ -507,6 +554,26 @@
                                     <input type="number" step="0.1" class="form-control" id="atmosferBasinci">
                                 </div>
                             </div>
+                                {% if olcum_tipi == 'direk_olcum' %}
+                                <div class="row mt-3">
+                                    <div class="col-md-12">
+                                        <label class="form-label fw-bold">Parametre Seçimi (İsteğe Bağlı):</label>
+                                        <select class="form-select" id="direkParametreSelect" multiple size="6"></select>
+                                        <small class="text-muted d-block mt-1">Seçim yaparsanız 2. Aşamada sadece seçtiğiniz parametreler açılır.</small>
+                                        <div class="mt-2 text-end">
+                                            <button type="button" class="btn btn-outline-primary btn-sm me-2" onclick="refreshDirekParametreOptions()">
+                                                <i class="fas fa-sync-alt me-1"></i>Bacaya Göre Getir
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm me-2" onclick="selectAllDirekParametreOptions()">
+                                                <i class="fas fa-check-double me-1"></i>Tümünü Seç
+                                            </button>
+                                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="clearDirekParametreSelection()">
+                                                <i class="fas fa-times me-1"></i>Temizle
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
                                 <div class="row mt-3">
                                 <div class="col-md-12 text-end">
                                     <button type="button" class="btn btn-warning me-2" onclick="goToAsama4FromStage1()">
@@ -599,11 +666,7 @@
                         </div>
                         <div class="card-body">
                             <div id="asama4Content">
-                                <!-- Dinamik olarak 4. aşama içeriği buraya yüklenecek -->
-                                <div class="alert alert-info">
-                                    <i class="fas fa-info-circle me-2"></i>
-                                    <strong>Not:</strong> Müşteri ve ölçüm kodu seçildikten sonra raporunuz burada görünecektir.
-                                </div>
+                                <!-- Üst özet kartı kaldırıldı -->
                             </div>
                             
                             <!-- Ölçüm Seçim Kartları (Dinamik olarak her parametre için oluşturulacak) -->
@@ -750,6 +813,121 @@ function getSessionJson(key) {
         console.warn(`[saha_olc] sessionStorage "${key}" okunamadı:`, error);
         return null;
     }
+}
+
+function clearAsama4SummaryContent() {
+    const asama4Content = document.getElementById('asama4Content');
+    if (!asama4Content) return;
+    asama4Content.innerHTML = '';
+    asama4Content.style.display = 'none';
+}
+
+function setCompactEditModeUI() {
+    document.body.classList.add('edit-compact-mode');
+    const kayitliOlcumlerKarti = document.getElementById('kayitliOlcumlerKarti');
+    if (kayitliOlcumlerKarti) {
+        kayitliOlcumlerKarti.style.display = 'none';
+    }
+}
+
+function getEditRequestFromQuery() {
+    const params = new URLSearchParams(window.location.search);
+    const editFlag = (params.get('edit') || '').toLowerCase();
+
+    if (!['1', 'true', 'evet', 'yes'].includes(editFlag)) {
+        return null;
+    }
+
+    const firma = (params.get('firma') || '').trim();
+    const olcumKodu = (params.get('olcum_kodu') || '').trim();
+    const baca = (params.get('baca') || '').trim();
+    const stageRaw = parseInt(params.get('stage') || '3', 10);
+    const stage = [1, 2, 3, 4].includes(stageRaw) ? stageRaw : 3;
+
+    if (!firma || !olcumKodu || !baca) {
+        return null;
+    }
+
+    return { firma, olcumKodu, baca, stage };
+}
+
+function focusAsamaForm(formId) {
+    const formIds = ['asama1Form', 'asama2Form', 'asama3Form', 'asama4Form'];
+    formIds.forEach(id => {
+        const form = document.getElementById(id);
+        if (!form) return;
+        form.style.display = id === formId ? 'block' : 'none';
+    });
+
+    const target = document.getElementById(formId);
+    if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+function applyEditModeFromQuery() {
+    if (window.__sahaEditModeApplied) {
+        return;
+    }
+
+    const editReq = getEditRequestFromQuery();
+    if (!editReq) {
+        return;
+    }
+
+    window.__sahaEditModeApplied = true;
+    setCompactEditModeUI();
+
+    const firmaInput = document.getElementById('firmaSelect');
+    const olcumInput = document.getElementById('olcumKoduSelect');
+    const bacaInput = document.getElementById('bacaSelect');
+
+    if (firmaInput) firmaInput.value = editReq.firma;
+    if (olcumInput) olcumInput.value = editReq.olcumKodu;
+    if (bacaInput) bacaInput.value = editReq.baca;
+
+    sessionStorage.setItem('selectedFirma', editReq.firma);
+    sessionStorage.setItem('selectedOlcumKodu', editReq.olcumKodu);
+    sessionStorage.setItem('selectedBaca', editReq.baca);
+
+    if (typeof checkBacaBilgileri === 'function') {
+        checkBacaBilgileri();
+    }
+    if (typeof loadExistingData === 'function') {
+        loadExistingData(editReq.firma, editReq.olcumKodu, editReq.baca);
+    }
+    if (typeof goToAsama1 === 'function') {
+        goToAsama1();
+    }
+
+    if (editReq.stage >= 2) {
+        setTimeout(() => {
+            if (typeof showAsama2Form === 'function') {
+                showAsama2Form();
+            }
+        }, 700);
+    }
+
+    if (editReq.stage >= 3) {
+        setTimeout(() => {
+            if (typeof showAsama3Form === 'function') {
+                showAsama3Form();
+            }
+        }, 1400);
+    }
+
+    if (editReq.stage >= 4) {
+        setTimeout(() => {
+            if (typeof goToAsama4 === 'function') {
+                goToAsama4();
+            }
+        }, 2300);
+    }
+
+    if (editReq.stage === 1) setTimeout(() => focusAsamaForm('asama1Form'), 500);
+    if (editReq.stage === 2) setTimeout(() => focusAsamaForm('asama2Form'), 1300);
+    if (editReq.stage === 3) setTimeout(() => focusAsamaForm('asama3Form'), 2400);
+    if (editReq.stage === 4) setTimeout(() => focusAsamaForm('asama4Form'), 3200);
 }
 
 // Kayıtlı saha ölçümleri tablosu filtreleme
@@ -1031,6 +1209,14 @@ function clearParametreFilters() {
 
 // Sayfa yüklendiğinde kaydedilen baca bilgilerini yükle
 document.addEventListener('DOMContentLoaded', function() {
+    // Direk Ölçüm modunda eski session verilerini temizle (her girişte temiz başla)
+    var _olcumTipiCheck = document.getElementById('olcumTipiData') ? document.getElementById('olcumTipiData').value : '';
+    if (_olcumTipiCheck === 'direk_olcum') {
+        sessionStorage.removeItem('asama1Data');
+        sessionStorage.removeItem('asama2Data');
+        console.log('⚠️ Direk ölçüm modu: eski session verileri temizlendi');
+    }
+
     // Kaydedilmiş 1. Aşama verilerini yükle
     loadAsama1Data();
     
@@ -1049,6 +1235,51 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     
     // Personel eskiden seçimle geliyordu; artık otomatik yönetildiği için liste yüklenmiyor
+
+    // Direk Ölçüm modunda 1. Aşamayı otomatik aç
+    var olcumTipi = document.getElementById('olcumTipiData').value;
+    if (olcumTipi === 'direk_olcum') {
+        var asama1Form = document.getElementById('asama1Form');
+        if (asama1Form) {
+            asama1Form.style.display = 'block';
+            asama1Form.scrollIntoView({ behavior: 'smooth' });
+        }
+        // Aşama butonlarını aktif et (firma/baca seçimi olmadan)
+        var asamaGecButton = document.getElementById('asamaGecButton');
+        var asama2GecButton = document.getElementById('asama2GecButton');
+        var asama3GecButton = document.getElementById('asama3GecButton');
+        var asama4GecButton = document.getElementById('asama4GecButton');
+        var asama4DirectButton = document.getElementById('asama4DirectButton');
+        if (asamaGecButton) { asamaGecButton.disabled = false; asamaGecButton.classList.replace('btn-secondary','btn-primary'); }
+        if (asama2GecButton) { asama2GecButton.disabled = false; asama2GecButton.classList.replace('btn-secondary','btn-primary'); }
+        if (asama3GecButton) { asama3GecButton.disabled = false; asama3GecButton.classList.replace('btn-secondary','btn-primary'); }
+        if (asama4GecButton) { asama4GecButton.disabled = false; asama4GecButton.classList.replace('btn-secondary','btn-info'); }
+        if (asama4DirectButton) { asama4DirectButton.disabled = false; asama4DirectButton.classList.replace('btn-secondary','btn-danger'); }
+        // Baca listesini yükle
+        fetch('/api/baca_list_all')
+            .then(r => r.json())
+            .then(data => {
+                var sel = document.getElementById('direkBacaSelect');
+                if (sel && data.success) {
+                    data.bacalar.forEach(function(b) {
+                        var opt = document.createElement('option');
+                        opt.value = b; opt.textContent = b;
+                        sel.appendChild(opt);
+                    });
+                }
+
+                // Parametre seçimi için başlangıç listesini yükle
+                loadDirekParametreOptionsForSelection(sel && sel.value ? sel.value : '');
+            });
+
+        // Baca seçimi yapılmadan da parametreleri seçebilmek için varsayılan listeyi yükle
+        loadDirekParametreOptionsForSelection('');
+    }
+
+    // Sonuçlar ekranından düzenleme ile gelindiyse ilgili kaydı otomatik yükle
+    setTimeout(() => {
+        applyEditModeFromQuery();
+    }, 900);
 });
 
 // Personel listesini yükle
@@ -1090,9 +1321,13 @@ function loadSavedBacaBilgileri() {
         .then(data => {
             if (Array.isArray(data)) {
                 const bacaBilgileriTableBody = document.getElementById('bacaBilgileriTableBody');
-                if (bacaBilgileriTableBody) {
-                bacaBilgileriTableBody.innerHTML = ''; // Mevcut verileri temizle
+                if (!bacaBilgileriTableBody) {
+                    // Direk ölçüm modunda tablo DOM'da yoksa sessizce çık
+                    console.log('bacaBilgileriTableBody DOM\'da yok, yükleme atlandı.');
+                    return;
                 }
+
+                bacaBilgileriTableBody.innerHTML = ''; // Mevcut verileri temizle
                 
                 data.forEach(record => {
                     addSavedBacaBilgileriToTable(record);
@@ -4659,6 +4894,10 @@ function loadBacaBilgileri() {
         .then(data => {
             if (Array.isArray(data)) {
                 const bacaBilgileriTableBody = document.getElementById('bacaBilgileriTableBody');
+                if (!bacaBilgileriTableBody) {
+                    console.log('bacaBilgileriTableBody DOM\'da yok, tablo yenileme atlandı.');
+                    return;
+                }
                 bacaBilgileriTableBody.innerHTML = ''; // Mevcut verileri temizle
                 
                             // Tüm verileri göster (sayfalama yok)
@@ -5433,13 +5672,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // KK parametrelerini yükle
-    loadKKParametreler();
+    // KK parametrelerini yükle (fonksiyon bazı sürümlerde olmayabilir)
+    if (typeof loadKKParametreler === 'function') {
+        loadKKParametreler();
+    } else {
+        console.warn('loadKKParametreler tanımlı değil, KK yükleme atlandı.');
+    }
     
     // Tarih alanlarını bugünün tarihi ile doldur
     const today = new Date().toISOString().split('T')[0];
-    document.getElementById('kkBaslangicTarihi').value = today;
-    document.getElementById('kkBitisTarihi').value = today;
+    const kkBaslangic = document.getElementById('kkBaslangicTarihi');
+    const kkBitis = document.getElementById('kkBitisTarihi');
+    if (kkBaslangic) kkBaslangic.value = today;
+    if (kkBitis) kkBitis.value = today;
 });
 
 // Personel senkronizasyonu
@@ -5642,7 +5887,7 @@ function loadExistingData(firma, olcumKodu, baca) {
 
 // 1. Aşama formunu temizle
 function clearAsama1Form() {
-    const fields = ['cihazSeri', 'bacaNo', 'ortBacaHizi', 'bacaSicakligi', 'bacaSicakligiFark', 'bacaMutlakBasinc', 'nem', 'sayacGazSicakligi', 'atmosferBasinci'];
+    const fields = ['cihazSeri', 'bacaNo', 'ortBacaHizi', 'bacaSicakligi', 'bacaSicakligiFark', 'bacaMutlakBasinc', 'nem', 'sayacGazSicakligi', 'atmosferBasinci', 'direkFirmaAdi', 'direkBacaAdi', 'direkOlcumKodu'];
     fields.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = '';
@@ -5661,6 +5906,13 @@ function fillAsama1Form(data) {
     if (data.nem) document.getElementById('nem').value = data.nem;
     if (data.sayacGazSicakligi) document.getElementById('sayacGazSicakligi').value = data.sayacGazSicakligi;
     if (data.atmosferBasinci) document.getElementById('atmosferBasinci').value = data.atmosferBasinci;
+    // Direk ölçüm alanları
+    var direkFirma = document.getElementById('direkFirmaAdi');
+    var direkBacaAdi = document.getElementById('direkBacaAdi');
+    var direkOlcumKodu = document.getElementById('direkOlcumKodu');
+    if (direkFirma && (data.firma_adi || data.firma)) direkFirma.value = data.firma_adi || data.firma;
+    if (direkBacaAdi && (data.baca_adi || data.baca)) direkBacaAdi.value = data.baca_adi || data.baca;
+    if (direkOlcumKodu && data.olcum_kodu) direkOlcumKodu.value = data.olcum_kodu;
     
     // 2. Aşama açıksa parametre başlıklarını güncelle
     const asama2Form = document.getElementById('asama2Form');
@@ -5688,7 +5940,124 @@ function updateAllParametreHeaders() {
     });
 }
 
+function normalizeParameterList(list) {
+    if (!Array.isArray(list)) return [];
+    return Array.from(new Set(list.map(p => String(p || '').trim()).filter(Boolean)));
+}
+
+function getSelectedDirekParameters() {
+    const select = document.getElementById('direkParametreSelect');
+    if (!select) return [];
+    return Array.from(select.selectedOptions).map(opt => String(opt.value || '').trim()).filter(Boolean);
+}
+
+function setDirekParametreOptions(paramNames, keepSelection = true) {
+    const select = document.getElementById('direkParametreSelect');
+    if (!select) return;
+
+    const previousSelection = keepSelection ? getSelectedDirekParameters() : [];
+    const normalized = normalizeParameterList(paramNames);
+
+    select.innerHTML = '';
+    normalized.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        if (keepSelection && previousSelection.includes(name)) {
+            option.selected = true;
+        }
+        select.appendChild(option);
+    });
+}
+
+function selectAllDirekParametreOptions() {
+    const select = document.getElementById('direkParametreSelect');
+    if (!select) return;
+    Array.from(select.options).forEach(opt => {
+        opt.selected = true;
+    });
+}
+
+function clearDirekParametreSelection() {
+    const select = document.getElementById('direkParametreSelect');
+    if (!select) return;
+    Array.from(select.options).forEach(opt => {
+        opt.selected = false;
+    });
+}
+
+function loadDirekParametreOptionsForSelection(bacaNo) {
+    const targetBaca = String(bacaNo || '').trim();
+
+    const loadAllParams = () => {
+        return fetch('/api/parametre_bilgileri')
+            .then(resp => resp.json())
+            .then(allData => {
+                if (Array.isArray(allData)) {
+                    return normalizeParameterList(allData.map(item => item['Parametre Adı'] || item.parametre || ''));
+                }
+                return [];
+            })
+            .catch(() => []);
+    };
+
+    if (targetBaca) {
+        fetch(`/api/baca_parameters_by_no?baca_no=${encodeURIComponent(targetBaca)}`)
+            .then(resp => resp.json())
+            .then(data => {
+                const params = (data && data.success && Array.isArray(data.parameters))
+                    ? normalizeParameterList(data.parameters)
+                    : [];
+
+                if (params.length > 0) {
+                    setDirekParametreOptions(params, false);
+                    return;
+                }
+
+                return loadAllParams().then(allParams => {
+                    setDirekParametreOptions(allParams, false);
+                });
+            })
+            .catch(error => {
+                console.error('Direk parametre listesi yüklenirken hata:', error);
+                loadAllParams().then(allParams => {
+                    setDirekParametreOptions(allParams, false);
+                });
+            });
+        return;
+    }
+
+    loadAllParams().then(allParams => {
+        setDirekParametreOptions(allParams, true);
+    });
+}
+
+function refreshDirekParametreOptions() {
+    const direkBaca = document.getElementById('direkBacaSelect');
+    const bacaNoInput = document.getElementById('bacaNo');
+    const baca = (direkBaca && direkBaca.value)
+        ? direkBaca.value
+        : (bacaNoInput && bacaNoInput.value)
+            ? bacaNoInput.value
+            : '';
+    loadDirekParametreOptionsForSelection(baca);
+}
+
 // 1. Aşamaya geç fonksiyonu
+// Direk Ölçüm modunda baca seçilince bacaNo alanını da doldur
+function onDirekBacaChange(baca) {
+    var bacaNoInput = document.getElementById('bacaNo');
+    if (bacaNoInput && baca) {
+        bacaNoInput.value = baca;
+    }
+    // bacaSelect'i de set et ki fetchBacaParameters doğru çalışsın (gizli alan)
+    var bacaSelect = document.getElementById('bacaSelect');
+    if (bacaSelect) bacaSelect.value = baca;
+
+    // Parametre seçimi kutusunu seçilen bacaya göre daralt
+    loadDirekParametreOptionsForSelection(baca);
+}
+
 function goToAsama1() {
     const firma = document.getElementById('firmaSelect').value;
     const olcumKodu = document.getElementById('olcumKoduSelect').value;
@@ -5724,7 +6093,7 @@ function goToAsama2() {
         } else {
             console.error('showAsama2Form fonksiyonu bulunamadı!');
         }
-    }, 500);
+    }, 800);
 }
 
 function goToAsama3() {
@@ -5758,10 +6127,14 @@ function loadAsama1Data() {
             // Form alanlarını doldur
             if (data.cihazSeri) document.getElementById('cihazSeri').value = data.cihazSeri;
             if (data.bacaNo) document.getElementById('bacaNo').value = data.bacaNo;
-            if (data.ortBacaHizi) document.getElementById('ortBacaHizi').value = data.ortBacaHizi;
+            if (data.ortBacaHizi || data.ortalamaBacaHizi) {
+                document.getElementById('ortBacaHizi').value = data.ortBacaHizi || data.ortalamaBacaHizi;
+            }
             if (data.bacaSicakligi) document.getElementById('bacaSicakligi').value = data.bacaSicakligi;
             if (data.bacaSicakligiFark) document.getElementById('bacaSicakligiFark').value = data.bacaSicakligiFark;
-            if (data.bacaMutlakBasinc) document.getElementById('bacaMutlakBasinc').value = data.bacaMutlakBasinc;
+            if (data.bacaMutlakBasinc || data.bacaMutlakBasinci) {
+                document.getElementById('bacaMutlakBasinc').value = data.bacaMutlakBasinc || data.bacaMutlakBasinci;
+            }
             if (data.nem) document.getElementById('nem').value = data.nem;
             if (data.sayacGazSicakligi) document.getElementById('sayacGazSicakligi').value = data.sayacGazSicakligi;
             if (data.atmosferBasinci) document.getElementById('atmosferBasinci').value = data.atmosferBasinci;
@@ -5814,10 +6187,24 @@ function clearFormFields() {
 
 // 1. Aşama verilerini kaydet
 function saveAsama1() {
+    // Direk ölçüm modunda firma/baca/ölçüm kodu elle girilen alanlardan al
+    const direkFirma = document.getElementById('direkFirmaAdi');
+    const direkBacaAdi = document.getElementById('direkBacaAdi');
+    const direkOlcumKodu = document.getElementById('direkOlcumKodu');
+    const direkBacaSel = document.getElementById('direkBacaSelect');
+    const selectedDirekParams = getSelectedDirekParameters();
+
+    const firmaVal = direkFirma ? (direkFirma.value || document.getElementById('firmaSelect').value) : document.getElementById('firmaSelect').value;
+    const olcumKoduVal = direkOlcumKodu ? (direkOlcumKodu.value || document.getElementById('olcumKoduSelect').value) : document.getElementById('olcumKoduSelect').value;
+    const bacaVal = direkBacaSel ? (direkBacaSel.value || document.getElementById('bacaSelect').value) : document.getElementById('bacaSelect').value;
+    const bacaAdiVal = direkBacaAdi ? direkBacaAdi.value : '';
+
     const formData = {
-        firma: document.getElementById('firmaSelect').value,
-        olcum_kodu: document.getElementById('olcumKoduSelect').value,
-        baca: document.getElementById('bacaSelect').value,
+        firma: firmaVal,
+        firma_adi: firmaVal,
+        olcum_kodu: olcumKoduVal,
+        baca: bacaVal,
+        baca_adi: bacaAdiVal || bacaVal,
         personel: document.getElementById('personelSelect').value,
         cihazSeri: document.getElementById('cihazSeri').value,
         bacaNo: document.getElementById('bacaNo').value,
@@ -5828,11 +6215,32 @@ function saveAsama1() {
         sayacGazSicakligi: document.getElementById('sayacGazSicakligi').value,
         bacaSicakligiFark: document.getElementById('bacaSicakligiFark').value,
         atmosferBasinci: document.getElementById('atmosferBasinci').value,
+        selected_parameters: selectedDirekParams,
+        selectedParameters: selectedDirekParams,
         asama: 1
     };
     
     // Verileri session storage'a kaydet
     sessionStorage.setItem('asama1Data', JSON.stringify(formData));
+    // Direk modda firmaSelect/olcumKoduSelect/bacaSelect gizli alanlarını da güncelle
+    // ki sonraki aşamalar doğru çalışsın
+    if (firmaVal) document.getElementById('firmaSelect').value = firmaVal;
+    if (olcumKoduVal) document.getElementById('olcumKoduSelect').value = olcumKoduVal;
+    // Baca için: direkBacaSelect → bacaNo text alanı sırasıyla dene
+    const _bacaFinal = bacaVal || (document.getElementById('bacaNo') ? document.getElementById('bacaNo').value : '');
+    if (_bacaFinal) document.getElementById('bacaSelect').value = _bacaFinal;
+    // direkBacaSelect'i de güncelle (sonraki showAsama2Form için)
+    var _direkBacaSel2 = document.getElementById('direkBacaSelect');
+    if (_direkBacaSel2 && !_direkBacaSel2.value && _bacaFinal) {
+        // Seçenekte yoksa dinamik ekle
+        var _opt = Array.from(_direkBacaSel2.options).find(o => o.value === _bacaFinal);
+        if (!_opt) {
+            var _newOpt = document.createElement('option');
+            _newOpt.value = _bacaFinal; _newOpt.textContent = _bacaFinal;
+            _direkBacaSel2.appendChild(_newOpt);
+        }
+        _direkBacaSel2.value = _bacaFinal;
+    }
     
     // Backend'e kaydet
     fetch('/api/save_asama_data', {
@@ -5868,33 +6276,61 @@ function showAsama2Form() {
     const asama2Form = document.getElementById('asama2Form');
     if (asama2Form) {
         asama2Form.style.display = 'block';
+        asama2Form.scrollIntoView({ behavior: 'smooth' });
         console.log('2. Aşama formu gösterildi');
     } else {
         console.error('asama2Form elementi bulunamadı!');
         return;
     }
     
-    // Baca numarasını al
+    // Baca numarasını al - sırasıyla: direkBacaSelect → bacaSelect → bacaNo text → direkBacaAdi text
+    const direkBacaSelect = document.getElementById('direkBacaSelect');
     const bacaSelect = document.getElementById('bacaSelect');
-    const baca = bacaSelect ? bacaSelect.value : '';
-    console.log('Seçilen baca:', baca);
+    const bacaNoInput = document.getElementById('bacaNo');
+    const direkBacaAdiInput = document.getElementById('direkBacaAdi');
+
+    const baca = (direkBacaSelect && direkBacaSelect.value)
+        ? direkBacaSelect.value
+        : (bacaSelect && bacaSelect.value)
+            ? bacaSelect.value
+            : (bacaNoInput && bacaNoInput.value)
+                ? bacaNoInput.value
+                : (direkBacaAdiInput && direkBacaAdiInput.value)
+                    ? direkBacaAdiInput.value
+                    : '';
+
+    console.log('Seçilen baca (showAsama2Form):', baca);
+
+    // Direk modda kullanıcı 1. Aşamada parametre seçtiyse öncelikle onu kullan
+    const olcumTipi = document.getElementById('olcumTipiData') ? document.getElementById('olcumTipiData').value : '';
+    const isDirekOlcum = olcumTipi === 'direk_olcum';
+    let selectedDirekParams = normalizeParameterList(getSelectedDirekParameters());
+    if (selectedDirekParams.length === 0) {
+        const asama1Session = getSessionJson('asama1Data');
+        if (asama1Session) {
+            selectedDirekParams = normalizeParameterList(
+                asama1Session.selected_parameters || asama1Session.selectedParameters || []
+            );
+        }
+    }
+    if (isDirekOlcum && selectedDirekParams.length > 0) {
+        console.log('Direk ölçüm manuel parametre seçimi kullanılacak:', selectedDirekParams);
+        window.currentBacaParameters = selectedDirekParams;
+        renderAsama2Form(selectedDirekParams);
+        if (baca) {
+            loadAsama2Data(baca, selectedDirekParams);
+        }
+        return;
+    }
     
     if (baca) {
         fetchBacaParameters(baca);
     } else {
-        console.error('Baca numarası bulunamadı!');
-        // Baca seçili değilse parametre göstermeyelim
+        console.warn('Baca numarası bulunamadı - parametre yüklenemedi.');
         renderAsama2Form([]);
     }
-    
-    // Eğer daha önce kaydedilmiş 2. Aşama verileri varsa yükle
-    if (window.existingAsama2Data) {
-        console.log('Mevcut 2. Aşama verileri yükleniyor:', window.existingAsama2Data);
-        // 2. Aşama formu render edildikten sonra verileri yükle
-        setTimeout(() => {
-            loadExistingAsama2Data(window.existingAsama2Data);
-        }, 1000);
-    }
+    // Not: existingAsama2Data yüklemesi fetchBacaParameters tamamlandıktan sonra
+    // fetchBacaParameters içinde yapılıyor (render sonrası). Burada tekrar çağırmıyoruz.
 }
 
 // Mevcut 2. Aşama verilerini yükle
@@ -6082,38 +6518,96 @@ function fetchBacaParameters(bacaNo) {
     // Firma ve ölçüm kodunu da al
     const firma = document.getElementById('firmaSelect').value;
     const olcumKodu = document.getElementById('olcumKoduSelect').value;
+    const olcumTipi = document.getElementById('olcumTipiData') ? document.getElementById('olcumTipiData').value : '';
+    const isDirekOlcum = olcumTipi === 'direk_olcum';
     
-    console.log('Parametreler için arama: Firma:', firma, 'Ölçüm Kodu:', olcumKodu, 'Baca:', bacaNo);
+    console.log('Parametreler için arama: Firma:', firma, 'Ölçüm Kodu:', olcumKodu, 'Baca:', bacaNo, 'Ölçüm Tipi:', olcumTipi);
     
-    fetch(`/api/baca_parameters?firma=${encodeURIComponent(firma)}&olcum_kodu=${encodeURIComponent(olcumKodu)}&baca_no=${encodeURIComponent(bacaNo)}`)
+    // Direk ölçüm modunda her zaman baca_no bazlı API kullan
+    let apiUrl;
+    if (isDirekOlcum || !firma || !olcumKodu) {
+        apiUrl = `/api/baca_parameters_by_no?baca_no=${encodeURIComponent(bacaNo)}`;
+    } else {
+        apiUrl = `/api/baca_parameters?firma=${encodeURIComponent(firma)}&olcum_kodu=${encodeURIComponent(olcumKodu)}&baca_no=${encodeURIComponent(bacaNo)}`;
+    }
+    
+    fetch(apiUrl)
         .then(response => {
             console.log('API response:', response);
             return response.json();
         })
         .then(data => {
             console.log('API data:', data);
-            if (data.success) {
-                console.log('Parametreler başarıyla yüklendi:', data.parameters);
-                // En güncel parametre listesini global olarak sakla (3. Aşama filtrelemesi için)
-                window.currentBacaParameters = Array.isArray(data.parameters) ? data.parameters : [];
-                renderAsama2Form(data.parameters);
-                loadAsama2Data(bacaNo, data.parameters);
-                
-                // Eğer daha önce kaydedilmiş 2. Aşama verileri varsa yükle
-                if (window.existingAsama2Data) {
-                    console.log('Mevcut 2. Aşama verileri yükleniyor:', window.existingAsama2Data);
-                    setTimeout(() => {
-                        loadExistingAsama2Data(window.existingAsama2Data);
-                    }, 1000);
-                }
-            } else {
+            if (!data.success) {
                 console.error('API hatası:', data.message);
                 alert('Parametreler yüklenirken hata: ' + data.message);
+                renderAsama2Form([]);
+                return;
+            }
+
+            const apiParameters = Array.isArray(data.parameters) ? data.parameters : [];
+
+            // Direk modda baca için parametre yoksa excel_data.json'dan tüm parametreleri al
+            if (apiParameters.length === 0 && isDirekOlcum) {
+                console.warn('Baca için parametre bulunamadı, tüm parametreler yükleniyor...');
+                return fetch('/api/parametre_bilgileri')
+                    .then(r => r.json())
+                    .then(allData => {
+                        let params = [];
+
+                        if (Array.isArray(allData)) {
+                            params = Array.from(new Set(allData
+                                .map(item => (item['Parametre Adı'] || item.parametre || '').trim())
+                                .filter(Boolean)
+                            ));
+                        }
+
+                        // Uyumluluk için: yeni endpoint varsa onu da dene
+                        if (params.length === 0) {
+                            return fetch('/api/all_parameter_names')
+                                .then(resp => resp.json())
+                                .then(byNameData => {
+                                    if (byNameData && byNameData.success && Array.isArray(byNameData.parameters)) {
+                                        return byNameData.parameters;
+                                    }
+                                    return [];
+                                })
+                                .catch(() => []);
+                        }
+
+                        return params;
+                    })
+                    .then(params => {
+                        const resolved = Array.isArray(params) ? params : [];
+                        window.currentBacaParameters = resolved;
+                        renderAsama2Form(resolved);
+                        loadAsama2Data(bacaNo, resolved);
+
+                        if (window.existingAsama2Data) {
+                            setTimeout(() => { loadExistingAsama2Data(window.existingAsama2Data); }, 2000);
+                        }
+                    });
+            }
+
+            console.log('Parametreler başarıyla yüklendi:', apiParameters);
+            // En güncel parametre listesini global olarak sakla (3. Aşama filtrelemesi için)
+            window.currentBacaParameters = apiParameters;
+            renderAsama2Form(apiParameters);
+            loadAsama2Data(bacaNo, apiParameters);
+
+            // Eğer daha önce kaydedilmiş 2. Aşama verileri varsa yükle
+            // Telefonda render biraz daha uzun sürebilir, 2000ms bekle
+            if (window.existingAsama2Data) {
+                console.log('Mevcut 2. Aşama verileri yükleniyor:', window.existingAsama2Data);
+                setTimeout(() => {
+                    loadExistingAsama2Data(window.existingAsama2Data);
+                }, 2000);
             }
         })
         .catch(error => {
             console.error('Parametreler yüklenirken hata:', error);
             alert('Parametreler yüklenirken hata oluştu!');
+            renderAsama2Form([]);
         });
 }
 
@@ -6121,11 +6615,25 @@ function fetchBacaParameters(bacaNo) {
 function renderAsama2Form(parameters) {
     const content = document.getElementById('asama2Content');
     content.innerHTML = '';
+
+    const safeParameters = Array.isArray(parameters)
+        ? parameters.map(p => String(p || '').trim()).filter(Boolean)
+        : [];
     
     // Parametre adlarını orijinal haliyle kullan (temizleme yapmadan)
-    console.log('2. Aşama için parametreler:', parameters);
+    console.log('2. Aşama için parametreler:', safeParameters);
+
+    if (safeParameters.length === 0) {
+        content.innerHTML = `
+            <div class="alert alert-warning mb-0">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Parametre bulunamadı. 1. aşamada Baca No/Baca seçimini kontrol edin veya farklı bir baca seçin.
+            </div>
+        `;
+        return;
+    }
     
-    parameters.forEach((parametre, index) => {
+    safeParameters.forEach((parametre, index) => {
         const parametreDiv = document.createElement('div');
         parametreDiv.className = 'card mb-3';
         // 1. Aşamadan tüm bilgileri al
@@ -6747,6 +7255,24 @@ function showAsama3Form() {
 }
 
 function continueShowAsama3Form() {
+    // 3. Aşamaya geçmeden önce 2. Aşama formundaki en güncel değerleri al
+    try {
+        if (typeof saveAsama2Data === 'function') {
+            saveAsama2Data();
+        }
+    } catch (e) {
+        console.warn('[continueShowAsama3Form] saveAsama2Data çağrısı başarısız:', e);
+    }
+
+    // Global 2. aşama verisi yoksa sessionStorage'dan geri yükle
+    if (!window.existingAsama2Data || !Array.isArray(window.existingAsama2Data.parametreler)) {
+        const cachedAsama2 = getSessionJson('asama2Data');
+        if (cachedAsama2 && Array.isArray(cachedAsama2.parametreler) && cachedAsama2.parametreler.length > 0) {
+            window.existingAsama2Data = cachedAsama2;
+            console.log('[continueShowAsama3Form] window.existingAsama2Data sessionStorage\'dan yüklendi');
+        }
+    }
+
     // 2. Aşama formunu gizle
     const asama2Form = document.getElementById('asama2Form');
     if (asama2Form) {
@@ -6989,6 +7515,8 @@ function createAsama3Content() {
     
     // Her parametre için Excel tablosu oluştur
     let content = '';
+    let visibleTableIndex = 0;
+    const asama2Bilgileri = getAsama2ParametreBilgileri();
     parametreCards.forEach((card, index) => {
         // Parametre adını temizle - sadece parametre adını al (Baca Hızı, Sıcaklık vb. bilgileri çıkar)
         let parametreName = card.querySelector('.card-header h6').textContent
@@ -7020,20 +7548,22 @@ function createAsama3Content() {
             console.log(`[createAsama3Content] Parametre filtrelendi (seçili değil): "${parametreName}"`);
             return;
         }
+
+        const asama2SourceIndex = index;
+        const tableIndex = visibleTableIndex;
+        visibleTableIndex += 1;
         
         // Travers sayısını al
-        const traversSayisi = document.getElementById(`traversSayisi_${index}`).value || 1;
-        
-        // 2. Aşamadaki bilgileri al
-        const asama2Bilgileri = getAsama2ParametreBilgileri();
-        const parametreBilgisi = asama2Bilgileri.parametreBilgileri[index] || {};
+        const traversEl = document.getElementById(`traversSayisi_${asama2SourceIndex}`);
+        const traversSayisi = traversEl ? (traversEl.value || 1) : 1;
+        const parametreBilgisi = asama2Bilgileri.parametreBilgileri[asama2SourceIndex] || {};
         
         content += `
-            <div class="card mb-4" data-parametre-name="${parametreName.replace(/"/g, '&quot;')}">
-                <div class="card-header bg-primary text-white" style="cursor: pointer;" onclick="toggleTable(${index})">
+            <div class="card mb-4" data-parametre-name="${parametreName.replace(/"/g, '&quot;')}" data-asama2-index="${asama2SourceIndex}">
+                <div class="card-header bg-primary text-white" style="cursor: pointer;" onclick="toggleTable(${tableIndex})">
                     <h6 class="mb-0">
                         <i class="fas fa-table me-2"></i>${parametreName} - Excel Hesaplama Tablosu
-                        <small class="float-end">${traversSayisi} Travers <i class="fas fa-chevron-down ms-2" id="chevron_${index}"></i></small>
+                        <small class="float-end">${traversSayisi} Travers <i class="fas fa-chevron-down ms-2" id="chevron_${tableIndex}"></i></small>
                     </h6>
                     <div class="mt-2">
                         <small class="text-light">
@@ -7042,9 +7572,9 @@ function createAsama3Content() {
                         </small>
                     </div>
                 </div>
-                <div class="card-body" id="tableBody_${index}" style="display: none;">
+                <div class="card-body" id="tableBody_${tableIndex}" style="display: none;">
                     <div class="table-responsive">
-                        <table class="table table-bordered table-sm" id="excelTable_${index}">
+                        <table class="table table-bordered table-sm" id="excelTable_${tableIndex}">
                             <thead>
                                 <tr>
                                     <th>SIRA</th>
@@ -7073,7 +7603,7 @@ function createAsama3Content() {
                                     <th>Nem</th>
                                 </tr>
                             </thead>
-                            <tbody id="excelBody_${index}">
+                            <tbody id="excelBody_${tableIndex}">
                                 <!-- Satırlar dinamik olarak eklenecek -->
                             </tbody>
                         </table>
@@ -7082,7 +7612,7 @@ function createAsama3Content() {
                         <div class="row align-items-center">
                             <div class="col-md-3">
                                 <label class="form-label">Travers Sayısı:</label>
-                                <select class="form-control form-control-sm" id="asama3TraversSayisi_${index}" onchange="updateTraversCount(${index})">
+                                <select class="form-control form-control-sm" id="asama3TraversSayisi_${tableIndex}" onchange="updateTraversCount(${tableIndex})">
                                     <option value="1" ${traversSayisi == 1 ? 'selected' : ''}>1 Travers</option>
                                     <option value="2" ${traversSayisi == 2 ? 'selected' : ''}>2 Travers</option>
                                     <option value="3" ${traversSayisi == 3 ? 'selected' : ''}>3 Travers</option>
@@ -7096,10 +7626,10 @@ function createAsama3Content() {
                                 </select>
                             </div>
                             <div class="col-md-9">
-                                <button type="button" class="btn btn-success btn-sm" onclick="addRowToExcelTable(${index})">
+                                <button type="button" class="btn btn-success btn-sm" onclick="addRowToExcelTable(${tableIndex})">
                                     <i class="fas fa-plus me-1"></i>Satır Ekle
                                 </button>
-                                <button type="button" class="btn btn-primary btn-sm ms-2" onclick="calculateExcelTable(${index})">
+                                <button type="button" class="btn btn-primary btn-sm ms-2" onclick="calculateExcelTable(${tableIndex})">
                                     <i class="fas fa-calculator me-1"></i>Hesapla
                                 </button>
                             </div>
@@ -7114,9 +7644,12 @@ function createAsama3Content() {
     
     // Her tablo için başlangıç satırlarını oluştur - DOM hazır olduktan sonra
     setTimeout(() => {
-        parametreCards.forEach((card, index) => {
-            const traversSayisi = document.getElementById(`traversSayisi_${index}`).value || 1;
-            populateExcelTable(index, traversSayisi);
+        const createdCards = asama3Content.querySelectorAll('.card[data-asama2-index]');
+        createdCards.forEach((card, tableIndex) => {
+            const asama2SourceIndex = parseInt(card.getAttribute('data-asama2-index') || '-1', 10);
+            const traversEl = asama2SourceIndex >= 0 ? document.getElementById(`traversSayisi_${asama2SourceIndex}`) : null;
+            const traversSayisi = traversEl ? (traversEl.value || 1) : 1;
+            populateExcelTable(tableIndex, traversSayisi, asama2SourceIndex);
         });
 
         // Tablolar hazır olduğunda 3. Aşama verilerini yükle ve başlat
@@ -7154,7 +7687,7 @@ function updateTraversCount(index) {
 }
 
 // Excel tablosunu doldur - 3 ölçüm × travers sayısı + ortalama satırları
-function populateExcelTable(tableIndex, traversCount) {
+function populateExcelTable(tableIndex, traversCount, sourceIndex) {
     const tbody = document.getElementById(`excelBody_${tableIndex}`);
     if (!tbody) return;
     
@@ -7163,6 +7696,18 @@ function populateExcelTable(tableIndex, traversCount) {
     // Parametre adını al - data attribute'dan veya başlıktan
     const card = document.querySelector(`#excelTable_${tableIndex}`).closest('.card');
     let parametreName = card ? (card.getAttribute('data-parametre-name') || '') : '';
+    const sourceIndexAttr = Number.isInteger(sourceIndex)
+        ? sourceIndex
+        : parseInt(card && card.getAttribute('data-asama2-index') ? card.getAttribute('data-asama2-index') : '-1', 10);
+
+    // Global önbellek boşsa sessionStorage'dan al
+    if (!window.existingAsama2Data || !Array.isArray(window.existingAsama2Data.parametreler)) {
+        const cachedAsama2 = getSessionJson('asama2Data');
+        if (cachedAsama2 && Array.isArray(cachedAsama2.parametreler) && cachedAsama2.parametreler.length > 0) {
+            window.existingAsama2Data = cachedAsama2;
+            console.log('[populateExcelTable] window.existingAsama2Data sessionStorage\'dan yüklendi');
+        }
+    }
     
     // Eğer data attribute yoksa, başlıktan parse et
     if (!parametreName) {
@@ -7223,6 +7768,10 @@ function populateExcelTable(tableIndex, traversCount) {
     let baslangic = '';
     
     if (window.existingAsama2Data && window.existingAsama2Data.parametreler) {
+        if (sourceIndexAttr >= 0 && window.existingAsama2Data.parametreler[sourceIndexAttr]) {
+            parametreBilgisi = window.existingAsama2Data.parametreler[sourceIndexAttr];
+        }
+
         // Parametre adlarını güvenli biçimde karşılaştır: aksan-insensitif, case-insensitif, boşlukları sadeleştir
         const norm = (s) => {
             return String(s || '')
@@ -7234,8 +7783,10 @@ function populateExcelTable(tableIndex, traversCount) {
                 .replace(/\s+/g, ' ');
         };
         const searchNameN = norm(parametreName);
-        // Önce tam eşleşme
-        parametreBilgisi = window.existingAsama2Data.parametreler.find(p => norm(p.parametre) === searchNameN);
+        if (!parametreBilgisi) {
+            // Önce tam eşleşme
+            parametreBilgisi = window.existingAsama2Data.parametreler.find(p => norm(p.parametre) === searchNameN);
+        }
         // Yoksa baştan eşleşme
         if (!parametreBilgisi) {
             parametreBilgisi = window.existingAsama2Data.parametreler.find(p => norm(p.parametre).startsWith(searchNameN));
@@ -7273,8 +7824,50 @@ function populateExcelTable(tableIndex, traversCount) {
             console.warn(`[populateExcelTable] JSON'da parametre bulunamadı: "${parametreName}"`);
         }
     } else {
-        console.error('[populateExcelTable] HATA: window.existingAsama2Data yok! 2. Aşama verileri yüklenmemiş.');
-        // JSON yoksa, sayfa yenilenmeli veya 2. Aşama tekrar kaydedilmeli
+        console.warn('[populateExcelTable] window.existingAsama2Data yok, DOM fallback denenecek.');
+    }
+
+    // Son çare: doğrudan 2. Aşama formundaki inputlardan oku
+    if (!parametreBilgisi) {
+        const fallbackIndex = sourceIndexAttr >= 0 ? sourceIndexAttr : tableIndex;
+        const nozzleInput = document.getElementById(`nozzleCapi_${fallbackIndex}`);
+        const sureInput = document.getElementById(`sure_${fallbackIndex}`);
+        const baslangicInput = document.getElementById(`baslangic_${fallbackIndex}`);
+
+        const fallbackNozzle = nozzleInput ? (nozzleInput.value || '').trim() : '';
+        const fallbackSureRaw = sureInput ? (sureInput.value || '').trim() : '';
+        let fallbackSureSaniye = 0;
+        if (fallbackSureRaw) {
+            if (fallbackSureRaw.includes(':')) {
+                const [mm, ss] = fallbackSureRaw.split(':');
+                fallbackSureSaniye = (parseInt(mm, 10) || 0) * 60 + (parseInt(ss, 10) || 0);
+            } else {
+                fallbackSureSaniye = parseFloat(fallbackSureRaw) || 0;
+            }
+        }
+
+        let fallbackBaslangic = '';
+        const baslangicRaw = baslangicInput ? (baslangicInput.value || '').trim() : '';
+        if (baslangicRaw) {
+            // datetime-local: yyyy-aa-ggThh:mm -> gg/aa/yy hh:mm
+            if (baslangicRaw.includes('T')) {
+                const [datePart, timePart] = baslangicRaw.split('T');
+                const [yyyy, aa, gg] = datePart.split('-');
+                const yy = String(yyyy || '').slice(-2);
+                fallbackBaslangic = `${gg}/${aa}/${yy} ${timePart}`;
+            } else {
+                fallbackBaslangic = baslangicRaw;
+            }
+        }
+
+        if (fallbackNozzle || fallbackSureRaw || fallbackBaslangic) {
+            nozzleCapi = fallbackNozzle;
+            sureSaniye = fallbackSureSaniye;
+            baslangic = fallbackBaslangic;
+            console.log(`[populateExcelTable] DOM fallback kullanıldı (index=${fallbackIndex}): sure=${sureSaniye}, nozzle=${nozzleCapi}, baslangic=${baslangic}`);
+        } else {
+            console.warn(`[populateExcelTable] DOM fallback da boş kaldı (index=${fallbackIndex}).`);
+        }
     }
     
     // Süreyi DD:SS formatına çevir (örn: 120 sn → 02:00, 180 sn → 03:00)
@@ -7779,6 +8372,7 @@ function addRowToExcelTable(tableIndex) {
     // Parametre adını al - data attribute'dan veya başlıktan
     const card = document.querySelector(`#excelTable_${tableIndex}`).closest('.card');
     let parametreName = card ? (card.getAttribute('data-parametre-name') || '') : '';
+    const sourceIndexAttr = parseInt(card && card.getAttribute('data-asama2-index') ? card.getAttribute('data-asama2-index') : '-1', 10);
     
     // Eğer data attribute yoksa, başlıktan parse et
     if (!parametreName) {
@@ -7820,15 +8414,40 @@ function addRowToExcelTable(tableIndex) {
     
     // 2. Aşamadan bu parametre için sure değerini al - DIREKT JSON'dan oku
     let sureSaniye = 0;
+
+    // Global önbellek boşsa sessionStorage'dan dene
+    if (!window.existingAsama2Data || !Array.isArray(window.existingAsama2Data.parametreler)) {
+        const cachedAsama2 = getSessionJson('asama2Data');
+        if (cachedAsama2 && Array.isArray(cachedAsama2.parametreler) && cachedAsama2.parametreler.length > 0) {
+            window.existingAsama2Data = cachedAsama2;
+            console.log('[addRowToExcelTable] window.existingAsama2Data sessionStorage\'dan yüklendi');
+        }
+    }
+
     if (window.existingAsama2Data && window.existingAsama2Data.parametreler) {
-        const parametreBilgisi = window.existingAsama2Data.parametreler.find(p => {
-            const pName = String(p.parametre).split('\n')[0].trim().toUpperCase();
-            const searchName = String(parametreName).trim().toUpperCase();
-            return pName.includes(searchName) || searchName.includes(pName);
-        });
-        sureSaniye = parametreBilgisi && parametreBilgisi.sure ? parseFloat(parametreBilgisi.sure) : 0;
+        let parametreBilgisi = null;
+
+        if (sourceIndexAttr >= 0 && window.existingAsama2Data.parametreler[sourceIndexAttr]) {
+            parametreBilgisi = window.existingAsama2Data.parametreler[sourceIndexAttr];
+        }
+
+        if (!parametreBilgisi) {
+            parametreBilgisi = window.existingAsama2Data.parametreler.find(p => {
+                const pName = String(p.parametre).split('\n')[0].trim().toUpperCase();
+                const searchName = String(parametreName).trim().toUpperCase();
+                return pName.includes(searchName) || searchName.includes(pName);
+            });
+        }
+
+        const sureRaw = parametreBilgisi && parametreBilgisi.sure ? String(parametreBilgisi.sure).trim() : '';
+        if (sureRaw.includes(':')) {
+            const [mm, ss] = sureRaw.split(':');
+            sureSaniye = (parseInt(mm, 10) || 0) * 60 + (parseInt(ss, 10) || 0);
+        } else {
+            sureSaniye = parseFloat(sureRaw) || 0;
+        }
     } else {
-        console.error('[addRowToExcelTable] HATA: window.existingAsama2Data yok!');
+        console.warn('[addRowToExcelTable] window.existingAsama2Data yok, süre varsayılan 0 kullanılacak.');
     }
     const dakika = Math.floor(sureSaniye / 60);
     const dakikaStr = String(dakika).padStart(2, '0');
@@ -9903,69 +10522,9 @@ function goToAsama4FromSelection() {
 // 4. aşama için verileri hazırla (sadece seçim bilgileriyle)
 function prepareAsama4DataFromSelection() {
     console.log('4. aşama verileri hazırlanıyor (sadece seçim)...');
-    
-    // Seçim verilerini sessionStorage'dan al
-    const firma = sessionStorage.getItem('selectedFirma') || '';
-    const olcumKodu = sessionStorage.getItem('selectedOlcumKodu') || '';
-    const baca = sessionStorage.getItem('selectedBaca') || '';
-    const personel = sessionStorage.getItem('selectedPersonel') || '';
-    
-    if (!firma || !olcumKodu) {
-        alert('Önce firma ve ölçüm kodu seçmelisiniz!');
-        return;
-    }
-    
-    // 4. aşama içeriğini hazırla
-    const asama4Content = document.getElementById('asama4Content');
-    if (asama4Content) {
-        // Basit rapor içeriği oluştur
-        const reportHTML = `
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h6 class="mb-0">
-                                <i class="fas fa-rocket me-2"></i>
-                                ${firma} - ${olcumKodu} - Baca No: ${baca}
-                            </h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <strong>Firma:</strong> ${firma}<br>
-                                    <strong>Ölçüm Kodu:</strong> ${olcumKodu}<br>
-                                    <strong>Baca No:</strong> ${baca}<br>
-                                    <strong>Personel:</strong> ${personel}
-                                </div>
-                                <div class="col-md-6">
-                                    <strong>Cihaz Seri No:</strong> -<br>
-                                    <strong>Ort. Baca Hızı:</strong> -<br>
-                                    <strong>Baca Sıcaklığı:</strong> -<br>
-                                    <strong>Nem:</strong> -
-                                </div>
-                            </div>
-                            
-                            <div class="alert alert-warning">
-                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                <strong>Not:</strong> Bu rapor sadece temel seçim bilgilerini içerir. Detaylı ölçüm verileri için aşamaları tamamlamalısınız.
-                            </div>
-                            
-                            <div class="text-center">
-                                <button type="button" class="btn btn-primary" onclick="printTermalRaporFromSelection()">
-                                    <i class="fas fa-print me-1"></i>Termal Yazıcıdan Yazdır
-                                </button>
-                                <button type="button" class="btn btn-success ms-2" onclick="downloadRaporFromSelection()">
-                                    <i class="fas fa-download me-1"></i>Raporu İndir
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        asama4Content.innerHTML = reportHTML;
-    }
+
+    // Üst özet kartı artık kullanılmıyor; sadece TXT kartları gösterilecek.
+    clearAsama4SummaryContent();
 }
 
 // Seçimden termal yazıcıdan rapor yazdır
@@ -10091,72 +10650,9 @@ function goToAsama4FromStage1() {
 // 4. aşama için verileri hazırla (sadece 1. aşama verileriyle)
 function prepareAsama4DataFromStage1() {
     console.log('4. aşama verileri hazırlanıyor (sadece 1. aşama)...');
-    
-    // 1. aşama verilerini sessionStorage'dan al
-    const asama1Data = getSessionJson('asama1Data') || {};
-    
-    if (!asama1Data.firma || !asama1Data.olcum_kodu) {
-        alert('Önce firma ve ölçüm kodu seçmelisiniz!');
-        return;
-    }
-    
-    // 4. aşama içeriğini hazırla
-    const asama4Content = document.getElementById('asama4Content');
-    if (asama4Content) {
-        // Rapor başlığını oluştur
-        const firmaAdi = asama1Data.firma || '';
-        const olcumKodu = asama1Data.olcum_kodu || '';
-        const bacaNo = asama1Data.bacaNo || asama1Data.baca || '';
-        const personel = asama1Data.personel || '';
-        
-        // Basit rapor içeriği oluştur
-        const reportHTML = `
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h6 class="mb-0">
-                                <i class="fas fa-file-alt me-2"></i>
-                                ${firmaAdi} - ${olcumKodu} - Baca No: ${bacaNo}
-                            </h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <strong>Firma:</strong> ${firmaAdi}<br>
-                                    <strong>Ölçüm Kodu:</strong> ${olcumKodu}<br>
-                                    <strong>Baca No:</strong> ${bacaNo}<br>
-                                    <strong>Personel:</strong> ${personel}
-                                </div>
-                                <div class="col-md-6">
-                                    <strong>Cihaz Seri No:</strong> ${asama1Data.cihazSeri || ''}<br>
-                                    <strong>Ort. Baca Hızı:</strong> ${asama1Data.ortalamaBacaHizi || ''} m/s<br>
-                                    <strong>Baca Sıcaklığı:</strong> ${asama1Data.bacaSicakligi || ''} °C<br>
-                                    <strong>Nem:</strong> ${asama1Data.nem || ''}%
-                                </div>
-                            </div>
-                            
-                            <div class="alert alert-warning">
-                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                <strong>Not:</strong> Bu rapor sadece 1. aşama verilerini içerir. Detaylı parametre ölçümleri için 2. ve 3. aşamaları tamamlamalısınız.
-                            </div>
-                            
-                            <div class="text-center">
-                                <button type="button" class="btn btn-primary" onclick="printTermalRapor()">
-                                    <i class="fas fa-print me-1"></i>Termal Yazıcıdan Yazdır
-                                </button>
-                                <button type="button" class="btn btn-success ms-2" onclick="downloadRapor()">
-                                    <i class="fas fa-download me-1"></i>Raporu İndir
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        asama4Content.innerHTML = reportHTML;
-    }
+
+    // Üst özet kartı artık kullanılmıyor; sadece TXT kartları gösterilecek.
+    clearAsama4SummaryContent();
 }
 
 // Doğrudan 4. Aşamaya geç (3. aşamayı atla)
@@ -10285,68 +10781,9 @@ function generateTermalText(asama1Data, asama2Data) {
 // 4. aşama için verileri hazırla (3. aşama olmadan)
 function prepareAsama4Data() {
     console.log('4. aşama verileri hazırlanıyor...');
-    
-    // 1. ve 2. aşama verilerini sessionStorage'dan al
-    const asama1Data = getSessionJson('asama1Data') || {};
-    const asama2Data = getSessionJson('asama2Data') || {};
-    
-    if (!asama1Data.firma || !asama1Data.olcum_kodu) {
-        alert('Önce firma ve ölçüm kodu seçmelisiniz!');
-        return;
-    }
-    
-    // 4. aşama içeriğini hazırla
-    const asama4Content = document.getElementById('asama4Content');
-    if (asama4Content) {
-        // Rapor başlığını oluştur
-        const firmaAdi = asama1Data.firma || '';
-        const olcumKodu = asama1Data.olcum_kodu || '';
-        const bacaNo = asama1Data.bacaNo || asama1Data.baca || '';
-        const personel = asama1Data.personel || '';
-        
-        // Basit rapor içeriği oluştur
-        const reportHTML = `
-            <div class="row">
-                <div class="col-md-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h6 class="mb-0">
-                                <i class="fas fa-file-alt me-2"></i>
-                                ${firmaAdi} - ${olcumKodu} - Baca No: ${bacaNo}
-                            </h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <strong>Firma:</strong> ${firmaAdi}<br>
-                                    <strong>Ölçüm Kodu:</strong> ${olcumKodu}<br>
-                                    <strong>Baca No:</strong> ${bacaNo}<br>
-                                    <strong>Personel:</strong> ${personel}
-                                </div>
-                                <div class="col-md-6">
-                                    <strong>Cihaz Seri No:</strong> ${asama1Data.cihazSeri || ''}<br>
-                                    <strong>Ort. Baca Hızı:</strong> ${asama1Data.ortalamaBacaHizi || ''} m/s<br>
-                                    <strong>Baca Sıcaklığı:</strong> ${asama1Data.bacaSicakligi || ''} °C<br>
-                                    <strong>Nem:</strong> ${asama1Data.nem || ''}%
-                                </div>
-                            </div>
-                            
-                            <div class="text-center">
-                                <button type="button" class="btn btn-primary" onclick="printTermalRapor()">
-                                    <i class="fas fa-print me-1"></i>Termal Yazıcıdan Yazdır
-                                </button>
-                                <button type="button" class="btn btn-success ms-2" onclick="downloadRapor()">
-                                    <i class="fas fa-download me-1"></i>Raporu İndir
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        asama4Content.innerHTML = reportHTML;
-    }
+
+    // Üst özet kartı artık kullanılmıyor; sadece TXT kartları gösterilecek.
+    clearAsama4SummaryContent();
 }
 
 // 4. Aşama için her parametre için TXT kartlarını oluştur
@@ -10387,6 +10824,12 @@ function createAsama4TxtCards() {
     const asama3Data = getSessionJson('asama3Data');
     if (!asama3Data || !asama3Data.parametreler || asama3Data.parametreler.length === 0) {
         console.warn('[createAsama4TxtCards] 3. aşama parametreleri bulunamadı');
+        container.innerHTML = `
+            <div class="alert alert-warning mb-3">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                4. aşama için 3. aşama verisi bulunamadı. Lütfen 3. aşamada "3. Aşamayı Kaydet" ile verileri kaydedip tekrar deneyin.
+            </div>
+        `;
         return;
     }
     
@@ -10518,6 +10961,12 @@ function goToAsama4() {
         asama4Form.style.display = 'block';
         console.log('4. Aşama formu gösterildi');
         asama4Form.scrollIntoView({ behavior: 'smooth' });
+
+        // 4. aşama özet içeriğini doldur
+        prepareAsama4Data();
+
+        // 4. aşama ölçüm başlıklarını güncelle
+        updateAsama4OlcumTitles();
     }
 }
 
@@ -10791,11 +11240,11 @@ function saveAsama2Data() {
     const olcumKodu = document.getElementById('olcumKoduSelect').value;
     const baca = document.getElementById('bacaSelect').value;
     const personel = document.getElementById('personelSelect').value;
-    
-    // Eğer temel bilgiler yoksa kaydetme
-    if (!firma || !olcumKodu || !baca) {
-        console.log('Temel bilgiler eksik, kaydetme yapılmıyor');
-        return;
+
+    // Temel bilgiler yoksa backend kaydetmeyi atlayacağız ama lokal kaydı yine yapacağız
+    const temelBilgilerEksik = !firma || !olcumKodu || !baca;
+    if (temelBilgilerEksik) {
+        console.log('Temel bilgiler eksik, sadece lokal kayıt yapılacak');
     }
     
     const asama2Data = {
@@ -10852,6 +11301,12 @@ function saveAsama2Data() {
     
     // Global 2. aşama verisini de güncelle (3. ve 4. aşama bu veriyi kullanıyor)
     window.existingAsama2Data = asama2Data;
+
+    // Temel bilgiler eksikse backend'e gönderme, lokal veri 3. aşama için yeterli
+    if (temelBilgilerEksik) {
+        console.warn('Temel bilgiler eksik, backend kaydetme atlandı (lokal kayıt tamam).');
+        return;
+    }
     
     // Backend'e kaydet (sessizce)
     fetch('/api/save_asama2_data', {
@@ -10967,11 +11422,52 @@ function fillAsama2Form(data) {
 
 // ==================== 4. AŞAMA - TXT RAPOR FONKSİYONLARI ====================
 
+// 4. Aşama için firma/ölçüm/baca bilgisini güvenli şekilde al
+function getAsama4SelectionValues() {
+    const getVal = (id) => {
+        const el = document.getElementById(id);
+        return el ? String(el.value || '').trim() : '';
+    };
+
+    const asama1 = getSessionJson('asama1Data') || {};
+    const asama2 = getSessionJson('asama2Data') || {};
+    const asama3 = getSessionJson('asama3Data') || {};
+
+    const firma =
+        getVal('firmaSelect') ||
+        getVal('direkFirmaAdi') ||
+        String(asama3.firma || asama2.firma || asama1.firma || asama1.firma_adi || '').trim();
+
+    const olcumKodu =
+        getVal('olcumKoduSelect') ||
+        getVal('direkOlcumKodu') ||
+        String(asama3.olcumKodu || asama3.olcum_kodu || asama2.olcumKodu || asama2.olcum_kodu || asama1.olcum_kodu || '').trim();
+
+    const baca =
+        getVal('bacaSelect') ||
+        getVal('direkBacaSelect') ||
+        getVal('bacaNo') ||
+        getVal('direkBacaAdi') ||
+        String(asama3.baca || asama2.baca || asama1.baca || asama1.bacaNo || asama1.baca_adi || '').trim();
+
+    // Mümkünse görünür alanları da senkron tut
+    const firmaInput = document.getElementById('firmaSelect');
+    const olcumInput = document.getElementById('olcumKoduSelect');
+    const bacaInput = document.getElementById('bacaSelect');
+
+    if (firmaInput && !String(firmaInput.value || '').trim() && firma) firmaInput.value = firma;
+    if (olcumInput && !String(olcumInput.value || '').trim() && olcumKodu) olcumInput.value = olcumKodu;
+    if (bacaInput && !String(bacaInput.value || '').trim() && baca) bacaInput.value = baca;
+
+    return { firma, olcumKodu, baca };
+}
+
 // 1,2,3. ölçümlerin Eurometric TXT'lerini birleştir (backend export_eurometric kullanarak)
 async function generateAllEurometricCombinedTxt() {
-    const firma = document.getElementById('firmaSelect').value || '';
-    const olcumKodu = document.getElementById('olcumKoduSelect').value || '';
-    const baca = document.getElementById('bacaSelect').value || '';
+    const selection = getAsama4SelectionValues();
+    const firma = selection.firma;
+    const olcumKodu = selection.olcumKodu;
+    const baca = selection.baca;
 
     if (!firma || !olcumKodu || !baca) {
         throw new Error('Firma, ölçüm kodu ve baca seçilmemiş');
@@ -10994,9 +11490,10 @@ async function generateAllEurometricCombinedTxt() {
 
 // TXT Rapor Önizleme
 async function generateAllParamsAllOlcumlerCombinedTxt() {
-    const firma = document.getElementById('firmaSelect').value || '';
-    const olcumKodu = document.getElementById('olcumKoduSelect').value || '';
-    const baca = document.getElementById('bacaSelect').value || '';
+    const selection = getAsama4SelectionValues();
+    const firma = selection.firma;
+    const olcumKodu = selection.olcumKodu;
+    const baca = selection.baca;
 
     if (!firma || !olcumKodu || !baca) {
         throw new Error('Firma, ölçüm kodu ve baca seçilmemiş');
@@ -11045,9 +11542,10 @@ async function previewTxtReport(olcumNo) {
         if (olcumNo === 'all') {
             txtContent = await generateAllEurometricCombinedTxt();
         } else {
-            const firma = document.getElementById('firmaSelect').value || '';
-            const olcumKodu = document.getElementById('olcumKoduSelect').value || '';
-            const baca = document.getElementById('bacaSelect').value || '';
+            const selection = getAsama4SelectionValues();
+            const firma = selection.firma;
+            const olcumKodu = selection.olcumKodu;
+            const baca = selection.baca;
 
             if (!firma || !olcumKodu || !baca) {
                 alert('Lütfen firma, ölçüm kodu ve baca seçin!');
@@ -11072,10 +11570,11 @@ async function previewTxtReport(olcumNo) {
 // Parametreye özel TXT rapor indir
 async function generateTxtReportForParam(paramIndex, olcumNo) {
     console.log(`TXT rapor oluşturuluyor: Parametre ${paramIndex}, Ölçüm ${olcumNo}`);
-    
-    const firma = document.getElementById('firmaSelect').value || '';
-    const olcumKodu = document.getElementById('olcumKoduSelect').value || '';
-    const baca = document.getElementById('bacaSelect').value || '';
+
+    const selection = getAsama4SelectionValues();
+    const firma = selection.firma;
+    const olcumKodu = selection.olcumKodu;
+    const baca = selection.baca;
     
     if (!firma || !olcumKodu || !baca) {
         alert('Lütfen firma, ölçüm kodu ve baca seçin!');
@@ -11116,9 +11615,10 @@ async function previewTxtReportForParam(paramIndex, olcumNo) {
     const previewContent = document.getElementById('txtPreviewContent');
     if (!previewArea || !previewContent) return;
     
-    const firma = document.getElementById('firmaSelect').value || '';
-    const olcumKodu = document.getElementById('olcumKoduSelect').value || '';
-    const baca = document.getElementById('bacaSelect').value || '';
+    const selection = getAsama4SelectionValues();
+    const firma = selection.firma;
+    const olcumKodu = selection.olcumKodu;
+    const baca = selection.baca;
     
     if (!firma || !olcumKodu || !baca) {
         alert('Lütfen firma, ölçüm kodu ve baca seçin!');
@@ -11159,9 +11659,10 @@ async function previewTxtReportForParam(paramIndex, olcumNo) {
 async function shareTxtReportForParam(paramIndex, olcumNo) {
     console.log(`TXT paylaşma: Parametre ${paramIndex}, Ölçüm ${olcumNo}`);
 
-    const firma = document.getElementById('firmaSelect').value || '';
-    const olcumKodu = document.getElementById('olcumKoduSelect').value || '';
-    const baca = document.getElementById('bacaSelect').value || '';
+    const selection = getAsama4SelectionValues();
+    const firma = selection.firma;
+    const olcumKodu = selection.olcumKodu;
+    const baca = selection.baca;
     
     if (!firma || !olcumKodu || !baca) {
         alert('Lütfen firma, ölçüm kodu ve baca seçin!');
@@ -11272,9 +11773,10 @@ async function generateTxtReport(olcumNo) {
     }
     
     // Tek ölçüm için backend endpoint'ini kullan
-    const firma = document.getElementById('firmaSelect').value || '';
-    const olcumKodu = document.getElementById('olcumKoduSelect').value || '';
-    const baca = document.getElementById('bacaSelect').value || '';
+    const selection = getAsama4SelectionValues();
+    const firma = selection.firma;
+    const olcumKodu = selection.olcumKodu;
+    const baca = selection.baca;
     
     if (!firma || !olcumKodu || !baca) {
         alert('Lütfen firma, ölçüm kodu ve baca seçin!');
