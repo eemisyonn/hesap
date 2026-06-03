@@ -1,9 +1,9 @@
-# fly.toml app configuration file generated for hesap-bw-wyg on 2026-05-05T09:43:00Z
+# fly.toml app configuration file generated for akare-emisyon on 2026-06-03T21:39:07Z
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'hesap-bw-wyg'
+app = 'akare-emisyon'
 primary_region = 'ams'
 
 [build]
